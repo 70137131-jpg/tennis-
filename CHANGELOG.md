@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Hardened tracking continuity, live peak deduplication, configuration validation,
+  model integrity checks, geometry/ball confidence gates, unique metric evidence,
+  and resource cleanup. Pipeline version is now `baseline-3`.
+
 - Live shot candidates use torso-relative wrist motion, anatomical shoulder
   orientation, scale-aware ball proximity, and explicit unknown classifications.
 - Shot evidence and phase-based technique checks explain detection confidence,
@@ -9,7 +13,7 @@
   not produce an overall score; experimental preview controls remain respected.
 - Shared live/uploaded phase measurements reject stale and clipped phases and
   select only targets applicable to the identified shot type. Pipeline version
-  is now `baseline-2`; coaching target ranges remain unchanged and unvalidated.
+  was advanced to `baseline-2`; coaching target ranges remain unchanged and unvalidated.
 
 ## 0.1.0 — 2026-10-05
 

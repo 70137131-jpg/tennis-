@@ -45,7 +45,7 @@ def test_dominant_hand_backhand_volley_and_ball_confirmation(config):
         def position(self, x, y):
             return [4, 12]
 
-    balls = [{"time": 0.2, "x": 210, "y": 100}]
+    balls = [{"time": 0.2, "x": 210, "y": 100, "confidence": 0.9}]
     shot = segment_shots(moving_poses(), 0.5, config, calibration=Court(), balls=balls)[0]
     assert shot.type == "volley" and shot.confidence == 0.88 and shot.court_position == [4, 12]
 
@@ -119,7 +119,7 @@ def test_ball_proximity_is_scale_invariant_and_long_net_swings_are_not_forced_vo
             return [4, 12]
 
     poses = moving_poses()
-    balls = [{"time": 0.2, "x": 280, "y": 100}]
+    balls = [{"time": 0.2, "x": 280, "y": 100, "confidence": 0.9}]
     original = segment_shots(poses, 0.5, config, calibration=Court(), balls=balls)[0]
     for pose in poses:
         for point in pose.keypoints:
@@ -153,3 +153,42 @@ def test_collapsed_torso_geometry_does_not_produce_shot(config):
             pose.keypoints[joint].x = 100
             pose.keypoints[joint].y = 100
     assert segment_shots(poses, 0.5, config) == []
+
+
+def test_low_confidence_feet_do_not_select_geometry_based_volley(config):
+    class Court:
+        def position(self, x, y):
+            return [4, 12]
+
+    poses = moving_poses()
+    for pose in poses:
+        pose.keypoints[15].confidence = 0.1
+    candidate = segment_shots(poses, 0.5, config, calibration=Court())[0]
+    assert candidate.type == "forehand" and candidate.court_position is None
+
+
+@pytest.mark.parametrize(
+    "ball",
+    [
+        {"time": 0.2, "x": 210, "y": 100, "confidence": 0.1},
+        {"time": 0.2, "x": 210, "y": 100, "confidence": 0.9, "interpolated": True},
+        {"time": 0.2, "x": float("nan"), "y": 100, "confidence": 0.9},
+        {"time": 0.2, "x": 210, "y": 100},
+    ],
+)
+def test_unreliable_ball_evidence_cannot_raise_confidence(config, ball):
+    assert segment_shots(moving_poses(), 0.5, config, balls=[ball])[0].confidence == 0.78
+
+
+def test_global_limit_keeps_earliest_contact_across_players(config):
+    near = moving_poses()
+    for pose in near:
+        pose.time += 0.4
+    far = moving_poses()
+    for pose in far:
+        pose.player_id = "player-far"
+        pose.side = "far"
+        pose.time += 1
+    # Player IDs sort far before near, but the earlier near swing must win.
+    shots = segment_shots(near + far, 2, {**config, "max_shots": 1})
+    assert len(shots) == 1 and shots[0].player_id == "player-near"

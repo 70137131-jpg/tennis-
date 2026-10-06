@@ -18,7 +18,10 @@ shot with measured metrics/tips/rating, mean target-match rating and processing
 milliseconds. `reduce_workload` asks the browser to lower capture resolution.
 Resizing resets geometric history so old coordinates do not contaminate metrics.
 
-Frame responses identify `pipeline_version` (currently `baseline-2`).
+Frame responses identify `pipeline_version` (currently `baseline-3`).
+Poses and shots include `track_epoch`, which changes after tracking restarts;
+phase analysis never combines epochs. Camera pauses/resizing discard pending
+shots and the latest result. The per-player shot gap persists across resets.
 Completed shots also include `classification_source` (`heuristic` or `trained`),
 `classification_evidence` (observed movement cues), and `technique` with `status`,
 `score`, `measured_checks`, `expected_checks`, `checks`, `explanation`, and

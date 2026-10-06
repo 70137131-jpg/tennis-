@@ -75,7 +75,7 @@ def test_rendering_measured_shots_and_clips(video_file, tmp_path, monkeypatch):
         },
     )
     assert report.shots and report.players and report.coach_validated
-    assert report.pipeline_version == "baseline-2"
+    assert report.pipeline_version == "baseline-3"
     assert all(shot.technique is not None for shot in report.shots)
     assert any(shot.metrics for shot in report.shots)
     assert all((tmp_path / "measured" / shot.clip).stat().st_size > 100 for shot in report.shots)

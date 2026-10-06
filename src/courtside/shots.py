@@ -1,3 +1,6 @@
+import math
+from collections import defaultdict
+
 import numpy as np
 
 from courtside.schemas import PoseFrame, Shot, ShotType
@@ -22,8 +25,15 @@ def segment_shots(
     shots: list[Shot] = []
     wrist = 9 if handedness == "left" else 10
     shoulder = 5 if handedness == "left" else 6
-    for player_id in sorted({pose.player_id for pose in poses}):
-        sequence = sorted((pose for pose in poses if pose.player_id == player_id), key=lambda p: p.time)
+    grouped: dict[tuple[str, int], list[PoseFrame]] = defaultdict(list)
+    for pose in poses:
+        if pose.time <= duration:
+            grouped[(pose.player_id, pose.track_epoch)].append(pose)
+    for player_id, epoch in sorted(grouped):
+        sequence = sorted(grouped[(player_id, epoch)], key=lambda p: p.time)
+        # A repeated timestamp carries no temporal evidence and must not form a peak.
+        repeated = {p.time for a, p in zip(sequence, sequence[1:]) if p.time == a.time}
+        sequence = [p for p in sequence if p.time not in repeated]
         speeds = [0.0]
         for a, b in zip(sequence, sequence[1:]):
             gap = b.time - a.time
@@ -31,12 +41,18 @@ def segment_shots(
             confidence = min(p.keypoints[i].confidence for p in [a, b] for i in [5, 6, wrist, 11, 12])
             speeds.append(
                 float(delta / gap)
-                if 0 < gap < 0.3 and confidence >= config["min_keypoint_confidence"]
+                if (
+                    0 < gap < 0.3
+                    and confidence >= config["min_keypoint_confidence"]
+                    and math.isfinite(delta / gap)
+                    and delta / gap <= config.get("max_wrist_speed", 40)
+                )
                 else 0.0
             )
         last_contact = -10.0
+        player_shots = 0
         for index in range(1, len(sequence) - 1):
-            if len(shots) >= config["max_shots"]:
+            if player_shots >= config["max_shots"]:
                 break
             current = sequence[index]
             if (
@@ -54,9 +70,15 @@ def segment_shots(
             position = (
                 calibration.position((points[15].x + points[16].x) / 2, max(points[15].y, points[16].y))
                 if calibration
+                and min(points[i].confidence for i in [15, 16]) >= config["min_keypoint_confidence"]
                 else None
             )
-            recent = [p for p in sequence[: index + 1] if current.time - p.time <= 0.6]
+            recent = [p for p in sequence[max(0, index - 12) : index + 1] if current.time - p.time <= 0.6]
+            # Do not reuse overhead or swing evidence from before an observation gap.
+            for offset in range(len(recent) - 1, 0, -1):
+                if recent[offset].time - recent[offset - 1].time >= 0.3:
+                    recent = recent[offset:]
+                    break
             displacement = max(
                 float(np.linalg.norm(relative_wrist(current, wrist) - relative_wrist(p, wrist)))
                 for p in recent
@@ -105,7 +127,18 @@ def segment_shots(
                     )
             shot_confidence = min(confidence, 0.78)
             if balls:
-                nearby = [b for b in balls if b and abs(b["time"] - current.time) <= 0.2]
+                nearby = [
+                    b
+                    for b in balls
+                    if isinstance(b, dict)
+                    and not b.get("interpolated", False)
+                    and all(
+                        type(b.get(k)) in (int, float) and math.isfinite(b[k])
+                        for k in ["time", "x", "y", "confidence"]
+                    )
+                    and config["min_keypoint_confidence"] <= b["confidence"] <= 1
+                    and abs(b["time"] - current.time) <= 0.2
+                ]
                 if nearby and min(
                     np.hypot(b["x"] - points[wrist].x, b["y"] - points[wrist].y) for b in nearby
                 ) < config.get("ball_contact_radius_torso", 1.5) * torso_length(current):
@@ -115,6 +148,7 @@ def segment_shots(
                 Shot(
                     id=f"shot-{len(shots) + 1:04d}",
                     player_id=player_id,
+                    track_epoch=epoch,
                     type=shot_type,
                     start=max(0, current.time - config["clip_before_seconds"]),
                     contact=current.time,
@@ -125,6 +159,8 @@ def segment_shots(
                 )
             )
             last_contact = current.time
-            if len(shots) >= config["max_shots"]:
-                break
-    return sorted(shots, key=lambda shot: shot.contact)
+            player_shots += 1
+    result = sorted(shots, key=lambda shot: (shot.contact, shot.player_id))[: config["max_shots"]]
+    for index, shot in enumerate(result, 1):
+        shot.id = f"shot-{index:04d}"
+    return result

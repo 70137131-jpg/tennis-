@@ -1,5 +1,6 @@
 """Bounded, stateful live-frame analysis. Frames are processed in memory only."""
 
+import math
 import os
 import time
 from collections import Counter, deque
@@ -10,6 +11,7 @@ import numpy as np
 import yaml
 
 from courtside.assessment import assess_technique, shot_metrics
+from courtside.configuration import validate_runtime_config
 from courtside.court import CourtCalibration
 from courtside.feedback import apply_rules, load_rules
 from courtside.schemas import PoseFrame
@@ -46,29 +48,20 @@ def jpeg_dimensions(data: bytes) -> tuple[int, int]:
     raise ValueError("Send a valid JPEG frame")
 
 
-def metric_rating(metrics) -> float | None:
-    measurable = [m for m in metrics if m.measurable and m.value is not None and m.target]
-    if not measurable:
-        return None
-    matches = sum(m.target[0] <= m.value <= m.target[1] for m in measurable)
-    return round(matches / len(measurable) * 100, 1)
-
-
 class LiveAnalyzer:
     def __init__(self, options=None, estimator=None):
         self.options = options or {}
         self.config = yaml.safe_load((ROOT / "configs/pipeline.yaml").read_text())
         self.live_config = yaml.safe_load((ROOT / "configs/live.yaml").read_text())
+        validate_runtime_config(self.config, self.live_config)
         self.rules = load_rules(ROOT / "configs/feedback_rules.yaml")
-        self.estimator = estimator or PoseEstimator(
-            Path(os.environ.get("COURTSIDE_MODEL", ROOT / "models/pose_landmarker_full.task"))
-        )
         self.tracker = PlayerTracker(self.config["smoothing_alpha"], self.config["max_track_gap_seconds"])
         self.ball_tracker = BallTracker(self.config)
         self.poses: deque[PoseFrame] = deque(maxlen=self.live_config["max_buffer_poses"])
         self.balls: deque[dict] = deque(maxlen=self.live_config["max_buffer_poses"])
         self.pending: dict = {}
         self.seen: set[tuple] = set()
+        self.last_contacts: dict[str, float] = {}
         self.counts: Counter = Counter()
         self.frame = 0
         self.last_timestamp = -1
@@ -76,6 +69,7 @@ class LiveAnalyzer:
         self.dimensions = None
         self.classifier = None
         self.latest_shot = None
+        self.closed = False
         self.ratings: deque[float] = deque(maxlen=100)
         if os.environ.get("COURTSIDE_CLASSIFIER"):
             from courtside.classifier import ShotClassifier
@@ -84,19 +78,53 @@ class LiveAnalyzer:
                 Path(os.environ["COURTSIDE_CLASSIFIER"]),
                 yaml.safe_load((ROOT / "configs/training.yaml").read_text()),
             )
+        if self.options.get("court_corners"):
+            CourtCalibration(self.options["court_corners"], 1000, 1000)
+        # Load last so invalid rules, bounds, calibration, or classifier cannot leak a native model.
+        self.estimator = estimator or PoseEstimator(
+            Path(os.environ.get("COURTSIDE_MODEL", ROOT / "models/pose_landmarker_full.task"))
+        )
 
     def close(self):
-        self.estimator.close()
+        if self.closed:
+            return
+        self.closed = True
+        try:
+            self.estimator.close()
+        finally:
+            self.poses.clear()
+            self.balls.clear()
+            self.pending.clear()
+            self.seen.clear()
+            self.last_contacts.clear()
+            self.latest_shot = None
+            self.ratings.clear()
+            self.counts.clear()
+            self.tracker.tracks.clear()
+            self.tracker.epochs.clear()
+            self.ball_tracker.previous = None
+            self.ball_tracker.last = None
+
+    def reset_history(self):
+        self.tracker = PlayerTracker(self.config["smoothing_alpha"], self.config["max_track_gap_seconds"])
+        self.ball_tracker = BallTracker(self.config)
         self.poses.clear()
         self.balls.clear()
         self.pending.clear()
         self.seen.clear()
+        self.latest_shot = None
 
     def process(self, jpeg: bytes, timestamp: int) -> dict:
         started = time.perf_counter()
-        if timestamp <= self.last_timestamp or timestamp < 0:
+        if self.closed:
+            raise RuntimeError("Live analyzer is closed")
+        if type(timestamp) is not int or timestamp <= self.last_timestamp or timestamp < 0:
             raise ValueError("Live frame timestamps must increase")
-        if not jpeg or len(jpeg) > self.live_config["max_frame_bytes"]:
+        if (
+            not isinstance(jpeg, (bytes, bytearray))
+            or not jpeg
+            or len(jpeg) > self.live_config["max_frame_bytes"]
+        ):
             raise ValueError("Live frame exceeds the configured byte limit")
         input_width, input_height = jpeg_dimensions(jpeg)
         if (
@@ -109,6 +137,8 @@ class LiveAnalyzer:
         if image is None or image.shape[0] * image.shape[1] > self.live_config["max_frame_pixels"]:
             raise ValueError("Send a JPEG frame no larger than 1080p")
         scale = min(1.0, self.live_config["max_width"] / image.shape[1])
+        if min(int(image.shape[1] * scale), int(image.shape[0] * scale)) < 2:
+            raise ValueError("JPEG dimensions are too narrow for live analysis")
         if scale < 1:
             image = cv2.resize(image, (int(image.shape[1] * scale), int(image.shape[0] * scale)))
         height, width = image.shape[:2]
@@ -116,16 +146,16 @@ class LiveAnalyzer:
             # Adaptive capture changes the coordinate system; never mix old/new joints.
             self.dimensions = None
             self.calibration = None
-            self.tracker = PlayerTracker(self.config["smoothing_alpha"], self.config["max_track_gap_seconds"])
-            self.ball_tracker = BallTracker(self.config)
-            self.poses.clear()
-            self.balls.clear()
-            self.pending.clear()
-            self.seen.clear()
+            self.reset_history()
         if self.dimensions is None:
             self.dimensions = (width, height)
             if self.options.get("court_corners"):
                 self.calibration = CourtCalibration(self.options["court_corners"], width, height)
+        if (
+            self.last_timestamp >= 0
+            and timestamp - self.last_timestamp > self.config["max_track_gap_seconds"] * 1000
+        ):
+            self.reset_history()
         self.last_timestamp = timestamp
         stamp = timestamp / 1000
         detections = self.estimator.detect(image, timestamp)
@@ -151,9 +181,15 @@ class LiveAnalyzer:
         )
         for shot in candidates:
             key = (shot.player_id, round(shot.contact * 1000))
-            if key in self.seen or len(self.pending) >= self.live_config["max_pending_shots"]:
+            if (
+                key in self.seen
+                or len(self.pending) >= self.live_config["max_pending_shots"]
+                or shot.contact - self.last_contacts.get(shot.player_id, -math.inf)
+                < self.config["min_shot_gap_seconds"]
+            ):
                 continue
             self.seen.add(key)
+            self.last_contacts[shot.player_id] = shot.contact
             shot.id = f"live-{key[1]}-{shot.player_id}"
             shot.end = shot.contact + self.config["clip_after_seconds"]
             self.pending[key] = shot
@@ -161,7 +197,11 @@ class LiveAnalyzer:
             if stamp < shot.end:
                 continue
             sequence = [
-                p for p in self.poses if p.player_id == shot.player_id and shot.start <= p.time <= shot.end
+                p
+                for p in self.poses
+                if p.player_id == shot.player_id
+                and p.track_epoch == shot.track_epoch
+                and shot.start <= p.time <= shot.end
             ]
             del self.pending[key]
             if not sequence:
@@ -180,16 +220,23 @@ class LiveAnalyzer:
             )
             preview = self.options.get("experimental_feedback", False)
             shot.technique = assess_technique(
-                shot, self.rules, self.options.get("age_group", "adult"),
-                self.options.get("level", "competitive"), preview or self.rules["coach_validated"]
-            )
-            rules = {**self.rules, "coach_validated": self.rules["coach_validated"] or preview}
-            shot.tips = apply_rules(
-                shot.metrics,
-                shot.type,
-                rules,
+                shot,
+                self.rules,
                 self.options.get("age_group", "adult"),
                 self.options.get("level", "competitive"),
+                preview or self.rules["coach_validated"],
+            )
+            rules = {**self.rules, "coach_validated": self.rules["coach_validated"] or preview}
+            shot.tips = (
+                apply_rules(
+                    shot.metrics,
+                    shot.type,
+                    rules,
+                    self.options.get("age_group", "adult"),
+                    self.options.get("level", "competitive"),
+                )
+                if shot.confidence >= self.rules["min_confidence"]
+                else []
             )
             rating = shot.technique.score
             if rating is not None:

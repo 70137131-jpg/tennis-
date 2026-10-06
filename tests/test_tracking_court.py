@@ -18,6 +18,17 @@ def test_tracking_survives_detector_order_changes():
     assert tracker.update([], 2, 0.1) == []
 
 
+def test_tracking_reacquisition_and_teleport_start_new_epochs():
+    tracker = PlayerTracker(alpha=0.5)
+    first = tracker.update([detection(100, 300)], 0, 0)[0]
+    ordinary = tracker.update([detection(102, 300)], 1, 0.1)[0]
+    jumped = tracker.update([detection(300, 300)], 2, 0.2)[0]
+    after_gap = tracker.update([detection(300, 300)], 3, 2)[0]
+    assert first.track_epoch == ordinary.track_epoch == 0
+    assert jumped.track_epoch == 1 and jumped.keypoints[11].x == 300
+    assert after_gap.track_epoch == 2
+
+
 def test_ball_interpolation_is_bounded_and_never_extrapolates():
     a = {"time": 0.1, "x": 10, "y": 20, "confidence": 0.9, "interpolated": False}
     b = {"time": 0.3, "x": 30, "y": 40, "confidence": 0.8, "interpolated": False}

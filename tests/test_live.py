@@ -7,8 +7,8 @@ import numpy as np
 import pytest
 from starlette.websockets import WebSocketDisconnect
 
-from courtside.live import LiveAnalyzer, metric_rating
-from courtside.schemas import Keypoint, Metric
+from courtside.live import LiveAnalyzer
+from courtside.schemas import Keypoint
 
 
 class Estimator:
@@ -87,20 +87,85 @@ def test_live_preview_disabled_and_invalid_frames_are_unscored(jpeg):
     engine.close()
 
 
-def test_live_rating_excludes_uncertain_metrics():
-    metric = Metric(
-        name="knee",
-        label="Knee",
-        phase="contact",
-        value=150,
-        unit="deg",
-        confidence=0.9,
-        measurable=True,
-        target=[110, 160],
-    )
-    uncertain = metric.model_copy(update={"value": None, "measurable": False})
-    assert metric_rating([metric, uncertain]) == 100
-    assert metric_rating([uncertain]) is None
+def test_live_retains_minimum_gap_between_sliding_window_candidates(jpeg, monkeypatch):
+    from courtside.schemas import Shot
+
+    calls = iter([1.0, 1.1])
+
+    def candidates(*args):
+        contact = next(calls)
+        return [
+            Shot(
+                id="s",
+                player_id="player-near",
+                type="forehand",
+                start=0,
+                contact=contact,
+                end=contact,
+                confidence=0.78,
+            )
+        ]
+
+    monkeypatch.setattr("courtside.live.segment_shots", candidates)
+    engine = LiveAnalyzer(estimator=Estimator())
+    engine.process(jpeg, 1000)
+    engine.process(jpeg, 1100)
+    assert len(engine.pending) == 1
+    engine.close()
+
+
+def test_closed_analyzer_rejects_frames_even_with_a_fake_estimator(jpeg):
+    engine = LiveAnalyzer(estimator=Estimator())
+    engine.close()
+    with pytest.raises(RuntimeError, match="closed"):
+        engine.process(jpeg, 0)
+
+
+@pytest.mark.parametrize("timestamp", [True, 0.5, float("nan"), float("inf")])
+def test_noninteger_timestamps_are_rejected_before_native_inference(jpeg, timestamp):
+    engine = LiveAnalyzer(estimator=Estimator())
+    with pytest.raises(ValueError, match="timestamps"):
+        engine.process(jpeg, timestamp)
+    engine.close()
+
+
+@pytest.mark.parametrize("failure", ["calibration", "classifier"])
+def test_failed_setup_does_not_allocate_native_estimator(monkeypatch, tmp_path, failure):
+    allocated = []
+    monkeypatch.setattr("courtside.live.PoseEstimator", lambda path: allocated.append(path))
+    options = {}
+    if failure == "calibration":
+        options["court_corners"] = [[0, 0]] * 4
+    else:
+        monkeypatch.setenv("COURTSIDE_CLASSIFIER", str(tmp_path / "missing.json"))
+    with pytest.raises((ValueError, FileNotFoundError)):
+        LiveAnalyzer(options)
+    assert allocated == []
+
+
+def test_close_clears_frame_and_pose_memory_even_when_native_close_fails(jpeg):
+    class BrokenClose(Estimator):
+        def close(self):
+            raise RuntimeError("native close failed")
+
+    engine = LiveAnalyzer(estimator=BrokenClose())
+    engine.process(jpeg, 0)
+    assert engine.tracker.tracks and engine.ball_tracker.previous is not None
+    with pytest.raises(RuntimeError, match="native close"):
+        engine.close()
+    assert not engine.poses and not engine.pending and not engine.tracker.tracks
+    assert engine.ball_tracker.previous is None and engine.latest_shot is None
+    engine.close()  # Idempotent, including after a failed native close.
+
+
+def test_camera_gap_discards_pending_shots_and_stale_latest_result(jpeg):
+    engine = LiveAnalyzer({"experimental_feedback": True}, Estimator())
+    for timestamp in range(0, 4000, 67):
+        result = engine.process(jpeg, timestamp)
+    assert result["latest_shot"] is not None
+    result = engine.process(jpeg, 10000)
+    assert result["latest_shot"] is None and not engine.pending and len(engine.poses) == 1
+    engine.close()
 
 
 def test_live_uses_classifier_shot_type_before_selecting_metric_targets(jpeg, monkeypatch):

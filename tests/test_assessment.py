@@ -119,20 +119,47 @@ def pose(time, knee_y=40):
 
 def test_phases_use_pre_contact_and_post_contact_frames_and_reject_stale_poses():
     candidate = shot()
-    metrics = shot_metrics([pose(0.5), pose(1, knee_y=30), pose(1.8)], candidate)
+    metrics = shot_metrics([pose(i / 10, knee_y=30 if i == 10 else 40) for i in range(5, 19)], candidate)
     assert metrics[0].value == 90  # Preparation knee, not the degenerate contact knee.
     assert metrics[1].value == 180
     missing = shot_metrics([pose(1)], candidate)
     assert missing[0].value is None and missing[2].value is None
     assert "preparation" in missing[0].reason and "finish" in missing[2].reason
     stale = shot_metrics([pose(0.5), pose(1.8)], candidate)
-    assert not stale[1].measurable and "contact" in stale[1].reason
+    assert not stale[1].measurable
     assert shot_metrics([], candidate) == []
 
 
 def test_clipped_preparation_is_not_replaced_with_a_mid_swing_pose():
     candidate = shot()
     candidate.contact = 0.2
-    metrics = shot_metrics([pose(0), pose(0.2), pose(1)], candidate)
+    metrics = shot_metrics([pose(i / 10) for i in range(11)], candidate)
     assert not metrics[0].measurable and "preparation" in metrics[0].reason
     assert metrics[1].measurable and metrics[2].measurable
+
+
+def test_duplicate_evidence_cannot_replace_a_missing_phase(rules):
+    candidate = shot()
+    candidate.metrics = [candidate.metrics[0], candidate.metrics[0].model_copy(deep=True)]
+    assessment = assess_technique(candidate, rules)
+    assert assessment.score is None and assessment.measured_checks < 2
+    assert all(not metric.measurable and metric.value is None for metric in candidate.metrics)
+
+
+def test_missing_contact_invalidates_the_entire_shot_measurement():
+    metrics = shot_metrics([pose(0.5), pose(1.8)], shot())
+    assert all(not metric.measurable for metric in metrics)
+
+
+def test_tracking_epochs_and_internal_gaps_cannot_be_combined_for_a_score():
+    frames = [pose(i / 10) for i in range(5, 19)]
+    for frame in frames:
+        if frame.time > 1.1:
+            frame.track_epoch = 1
+    assert not shot_metrics(frames, shot())[2].measurable
+    interrupted = [frame for frame in frames if frame.time <= 1 or frame.time >= 1.5]
+    for frame in interrupted:
+        frame.track_epoch = 0
+    metrics = shot_metrics(interrupted, shot())
+    assert all(not metric.measurable for metric in metrics)
+    assert "Tracking gap" in metrics[0].reason

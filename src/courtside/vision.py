@@ -1,3 +1,4 @@
+import hashlib
 from itertools import permutations
 from pathlib import Path
 from typing import Literal, cast
@@ -5,6 +6,7 @@ from typing import Literal, cast
 import cv2
 import numpy as np
 
+from courtside.readiness import OFFICIAL_POSE_SHA256
 from courtside.schemas import Keypoint, PoseFrame
 
 COCO_FROM_MEDIAPIPE = [0, 2, 5, 7, 8, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]
@@ -34,6 +36,11 @@ class PoseEstimator:
             raise RuntimeError(
                 "Pose model missing. Run: python data/download_model.py, then restart the worker."
             )
+        if (
+            model_path.name == "pose_landmarker_full.task"
+            and hashlib.sha256(model_path.read_bytes()).hexdigest() != OFFICIAL_POSE_SHA256
+        ):
+            raise RuntimeError("Official pose model failed SHA256 verification; download it again")
         try:
             import mediapipe as mp
         except ImportError as exc:
@@ -75,10 +82,12 @@ class PlayerTracker:
     def __init__(self, alpha=0.45, max_gap=1.0):
         self.alpha, self.max_gap = alpha, max_gap
         self.tracks: dict[str, PoseFrame] = {}
+        self.epochs: dict[str, int] = {}
 
     def update(
         self, detections: list[list[Keypoint]], frame: int, time: float, calibration=None
     ) -> list[PoseFrame]:
+        self.tracks = {k: v for k, v in self.tracks.items() if 0 <= time - v.time <= self.max_gap}
         if not detections:
             return []
         detections = detections[:2]
@@ -110,6 +119,38 @@ class PlayerTracker:
         for points, side in zip(detections, assignment):
             old = live.get(side)
             if old:
+                old_points = old.keypoints
+                old_scale = max(
+                    10.0,
+                    float(
+                        np.linalg.norm(
+                            center(old_points)
+                            - np.array(
+                                [
+                                    (old_points[5].x + old_points[6].x) / 2,
+                                    (old_points[5].y + old_points[6].y) / 2,
+                                ]
+                            )
+                        )
+                    ),
+                )
+                new_scale = max(
+                    10.0,
+                    float(
+                        np.linalg.norm(
+                            center(points)
+                            - np.array([(points[5].x + points[6].x) / 2, (points[5].y + points[6].y) / 2])
+                        )
+                    ),
+                )
+                if (
+                    np.linalg.norm(center(points) - center(old_points)) > 2 * max(old_scale, new_scale)
+                    or not 0.5 <= new_scale / old_scale <= 2
+                ):
+                    old = None
+            if old is None:
+                self.epochs[side] = self.epochs.get(side, -1) + 1
+            if old:
                 points = [
                     Keypoint(
                         x=self.alpha * new.x + (1 - self.alpha) * prev.x,
@@ -125,6 +166,7 @@ class PlayerTracker:
                 time=time,
                 player_id=f"player-{side}",
                 side=cast(Literal["near", "far"], side),
+                track_epoch=self.epochs[side],
                 keypoints=points,
             )
             self.tracks[side] = pose

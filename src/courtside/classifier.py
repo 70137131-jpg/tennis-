@@ -15,8 +15,13 @@ FEATURE_COUNT = 17 * 2 * 5
 
 
 def pose_features(sequence: list[PoseFrame], confidence=0.65, min_frames=3) -> np.ndarray:
+    ordered = sorted(sequence, key=lambda p: p.time)
+    if len({(p.player_id, p.track_epoch) for p in ordered}) != 1 or any(
+        not 0 < b.time - a.time <= 0.3 + 1e-6 for a, b in zip(ordered, ordered[1:])
+    ):
+        raise ValueError("Classification requires one continuous player track")
     usable = []
-    for pose in sorted(sequence, key=lambda p: p.time):
+    for pose in ordered:
         points = pose.keypoints
         if min(points[i].confidence for i in [5, 6, 9, 10, 11, 12]) < confidence:
             continue

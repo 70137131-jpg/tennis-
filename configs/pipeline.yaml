@@ -1,4 +1,4 @@
-version: baseline-2
+version: baseline-3
 analysis_fps: 15
 max_width: 1280
 min_keypoint_confidence: 0.65
@@ -7,6 +7,7 @@ max_track_gap_seconds: 1.0
 max_ball_gap_seconds: 0.2
 min_shot_gap_seconds: 0.8
 wrist_speed_threshold: 1.0
+max_wrist_speed: 40
 min_swing_displacement: 0.35
 stroke_side_margin: 0.15
 ball_contact_radius_torso: 1.5

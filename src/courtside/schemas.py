@@ -20,6 +20,7 @@ class PoseFrame(SchemaModel):
     time: float = Field(ge=0)
     player_id: str
     side: Literal["near", "far"]
+    track_epoch: int = Field(default=0, ge=0)
     keypoints: list[Keypoint] = Field(min_length=17, max_length=17)
 
 
@@ -88,6 +89,7 @@ class TechniqueAssessment(SchemaModel):
 class Shot(SchemaModel):
     id: str
     player_id: str
+    track_epoch: int = Field(default=0, ge=0)
     type: ShotType
     start: float = Field(ge=0)
     contact: float = Field(ge=0)

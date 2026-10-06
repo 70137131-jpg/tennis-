@@ -8,6 +8,7 @@ import numpy as np
 import yaml
 
 from courtside.assessment import assess_technique, shot_metrics
+from courtside.configuration import validate_runtime_config
 from courtside.court import CourtCalibration, line_candidates
 from courtside.feedback import apply_rules, load_rules, summarize_tips
 from courtside.schemas import PoseFrame, Report
@@ -26,17 +27,20 @@ def analyze(video: Path, output: Path, options=None, progress=None) -> Report:
     for key in ["analysis_fps", "max_width"]:
         if key in options:
             config[key] = options[key]
+    validate_runtime_config(config)
     rules = load_rules(ROOT / "configs/feedback_rules.yaml")
     info = inspect_video(video, config["max_duration_seconds"])
     output.mkdir(parents=True, exist_ok=True)
     progress(3, "Reading video")
     model = Path(os.environ.get("COURTSIDE_MODEL", str(ROOT / "models/pose_landmarker_full.task")))
-    estimator = PoseEstimator(model)
     scale = min(1.0, config["max_width"] / info.width)
     width, height = int(info.width * scale) // 2 * 2, int(info.height * scale) // 2 * 2
+    if min(width, height) < 2:
+        raise ValueError("Video dimensions are too narrow for analysis")
     calibration = (
         CourtCalibration(options["court_corners"], width, height) if options.get("court_corners") else None
     )
+    estimator = PoseEstimator(model)
     tracker = PlayerTracker(config["smoothing_alpha"], config["max_track_gap_seconds"])
     ball_tracker = BallTracker(config)
     cap = cv2.VideoCapture(str(video))
@@ -88,7 +92,11 @@ def analyze(video: Path, output: Path, options=None, progress=None) -> Report:
         classifier = ShotClassifier(Path(classifier_path), training_config)
         for shot in shots:
             sequence = [
-                p for p in poses if p.player_id == shot.player_id and shot.start <= p.time <= shot.end
+                p
+                for p in poses
+                if p.player_id == shot.player_id
+                and p.track_epoch == shot.track_epoch
+                and shot.start <= p.time <= shot.end
             ]
             shot.type, probability = classifier.predict(sequence)
             shot.confidence = min(shot.confidence, probability)
@@ -104,15 +112,22 @@ def analyze(video: Path, output: Path, options=None, progress=None) -> Report:
             config["min_keypoint_confidence"],
         )
         shot.technique = assess_technique(
-            shot, rules, options.get("age_group", "adult"), options.get("level", "competitive"),
-            rules["coach_validated"]
-        )
-        shot.tips = apply_rules(
-            shot.metrics,
-            shot.type,
+            shot,
             rules,
             options.get("age_group", "adult"),
             options.get("level", "competitive"),
+            rules["coach_validated"],
+        )
+        shot.tips = (
+            apply_rules(
+                shot.metrics,
+                shot.type,
+                rules,
+                options.get("age_group", "adult"),
+                options.get("level", "competitive"),
+            )
+            if shot.confidence >= rules["min_confidence"]
+            else []
         )
     progress(65, "Rendering skeleton overlays")
     indexed: dict[int, list[PoseFrame]] = {}

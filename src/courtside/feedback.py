@@ -1,5 +1,6 @@
 """Pure, versioned and confidence-gated coaching rules."""
 
+import math
 from copy import deepcopy
 from pathlib import Path
 
@@ -10,12 +11,71 @@ from courtside.schemas import Metric, Tip
 
 def load_rules(path: Path) -> dict:
     rules = yaml.safe_load(path.read_text(encoding="utf-8"))
-    if not isinstance(rules, dict) or not rules.get("version"):
+    if not isinstance(rules, dict) or not isinstance(rules.get("version"), str) or not rules["version"]:
         raise ValueError("Rules need a version")
+    if type(rules.get("coach_validated")) is not bool:
+        raise ValueError("coach_validated must be a boolean")
+    confidence = rules.get("min_confidence")
+    if (
+        not isinstance(confidence, (int, float))
+        or isinstance(confidence, bool)
+        or not math.isfinite(confidence)
+        or not 0 < confidence <= 1
+    ):
+        raise ValueError("Rules need a finite confidence threshold")
+    for name in ["max_tips_per_shot", "max_tips_per_session"]:
+        if type(rules.get(name)) is not int or not 0 <= rules[name] <= 100:
+            raise ValueError(f"Invalid {name}")
+
+    def check_range(target):
+        if (
+            not isinstance(target, list)
+            or len(target) != 2
+            or any(type(v) not in (int, float) or not math.isfinite(v) for v in target)
+            or target[0] > target[1]
+        ):
+            raise ValueError("Rule targets must be finite ordered ranges")
+
+    entries = rules.get("rules")
+    if not isinstance(entries, list):
+        raise ValueError("Rules must be a list")
+    seen = set()
     for rule in rules.get("rules", []):
-        target = rule["target"]
-        if len(target) != 2 or target[0] > target[1]:
-            raise ValueError("Rule targets must be ordered ranges")
+        if (
+            not isinstance(rule, dict)
+            or not isinstance(rule.get("metric"), str)
+            or rule.get("phase") not in {"preparation", "contact", "finish"}
+            or not isinstance(rule.get("shots"), list)
+            or not rule["shots"]
+        ):
+            raise ValueError("Each rule needs a metric, phase and supported shot types")
+        check_range(rule.get("target"))
+        if any(
+            not isinstance(rule.get(name), str) or not rule[name].strip()
+            for name in ["metric", "title", "explanation"]
+        ):
+            raise ValueError("Rules need nonempty metric, title and explanation strings")
+        joints = rule.get("joints", [])
+        if not isinstance(joints, list) or any(type(j) is not int or not 0 <= j < 17 for j in joints):
+            raise ValueError("Rule joints must be COCO keypoint indices")
+        for shot_type in rule["shots"]:
+            key = (rule["metric"], rule["phase"], shot_type)
+            if shot_type not in {"serve", "forehand", "backhand", "volley"} or key in seen:
+                raise ValueError("Rules must have unique targets for each shot and phase")
+            seen.add(key)
+        if type(rule.get("severity")) is not int or not 1 <= rule["severity"] <= 3:
+            raise ValueError("Rule severity must be between 1 and 3")
+    profiles = rules.get("profiles", {})
+    adjustments = rules.get("level_adjustments", {})
+    if not isinstance(profiles, dict) or not isinstance(adjustments, dict):
+        raise ValueError("Rule profiles and adjustments must be mappings")
+    for profile in profiles.values():
+        if not isinstance(profile, dict):
+            raise ValueError("Rule profiles must contain target mappings")
+        for target in profile.values():
+            check_range(target)
+    if any(type(v) not in (int, float) or not math.isfinite(v) or v < 0 for v in adjustments.values()):
+        raise ValueError("Level tolerances must be finite and nonnegative")
     return rules
 
 

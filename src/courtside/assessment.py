@@ -1,5 +1,6 @@
 """Traceable shot-phase assessment using configured 2D technique proxies."""
 
+from collections import Counter
 from typing import Literal
 
 from courtside.feedback import target_for
@@ -10,7 +11,13 @@ from courtside.schemas import Metric, PoseFrame, Shot, TechniqueAssessment, Tech
 def shot_metrics(
     sequence: list[PoseFrame], shot: Shot, handedness="right", min_confidence=0.65
 ) -> list[Metric]:
-    sequence = [p for p in sequence if p.player_id == shot.player_id and shot.start <= p.time <= shot.end]
+    sequence = [
+        p
+        for p in sequence
+        if p.player_id == shot.player_id
+        and p.track_epoch == shot.track_epoch
+        and shot.start <= p.time <= shot.end
+    ]
     if not sequence:
         return []
     moments = {
@@ -36,6 +43,14 @@ def shot_metrics(
         phases[phase] = nearest
         if not candidates or not shot.start <= moment <= shot.end or abs(nearest.time - moment) > 0.3:
             missing.add(phase)
+    if "contact" in missing:
+        missing.update(moments)
+    ordered = sorted(
+        p.time for p in sequence if phases["preparation"].time <= p.time <= phases["finish"].time
+    )
+    interrupted = any(b - a > 0.3 + 1e-6 for a, b in zip(ordered, ordered[1:]))
+    if interrupted:
+        missing.update(moments)
     metrics = compute_metrics(
         phases["preparation"], phases["contact"], phases["finish"], handedness, min_confidence
     )
@@ -43,13 +58,29 @@ def shot_metrics(
         if metric.phase in missing:
             metric.value = None
             metric.measurable = False
-            metric.reason = f"No reliable {metric.phase} pose in the shot window"
+            metric.reason = (
+                "Tracking gap within the shot window"
+                if interrupted
+                else f"No reliable {metric.phase} pose in the shot window"
+            )
     return metrics
 
 
 def assess_technique(shot: Shot, rules: dict, age_group="adult", level="competitive", enabled=True):
     checks = []
+    occurrences = Counter((m.name, m.phase) for m in shot.metrics)
     for metric in shot.metrics:
+        if occurrences[(metric.name, metric.phase)] > 1:
+            metric.value = None
+            metric.measurable = False
+            metric.reason = "Duplicate metric evidence"
+    reliable_type = shot.type != "unknown" and shot.confidence >= rules["min_confidence"]
+    added = set()
+    for metric in shot.metrics:
+        key = (metric.name, metric.phase)
+        if key in added:
+            continue
+        added.add(key)
         rule = next(
             (
                 r
@@ -58,15 +89,21 @@ def assess_technique(shot: Shot, rules: dict, age_group="adult", level="competit
             ),
             None,
         )
-        metric.target = target_for(rule, rules, age_group, level) if rule else None
+        metric.target = (
+            target_for(rule, rules, age_group, level) if rule and reliable_type and enabled else None
+        )
         status: Literal["within_target", "below_target", "above_target", "not_measurable", "no_target"] = (
             "no_target"
         )
         reason: str | None = "No configured target for this shot type"
-        if not metric.measurable or metric.value is None or metric.confidence < rules["min_confidence"]:
+        if occurrences[key] > 1:
+            status, reason = "not_measurable", "Duplicate metric evidence"
+        elif not metric.measurable or metric.value is None or metric.confidence < rules["min_confidence"]:
             status, reason = "not_measurable", metric.reason or "Low-confidence measurement"
         elif not enabled:
             reason = "Technique comparisons are disabled"
+        elif not reliable_type:
+            reason = "Shot type is uncertain"
         elif metric.target:
             status = (
                 "below_target"
@@ -88,7 +125,7 @@ def assess_technique(shot: Shot, rules: dict, age_group="adult", level="competit
                 reason=reason,
             )
         )
-    expected = sum(shot.type in r["shots"] for r in rules["rules"])
+    expected = len({(r["metric"], r["phase"]) for r in rules["rules"] if shot.type in r["shots"]})
     measured = [c for c in checks if c.status in {"within_target", "below_target", "above_target"}]
     score = None
     assessment_status: Literal["provisional", "limited", "unavailable", "disabled"] = "unavailable"

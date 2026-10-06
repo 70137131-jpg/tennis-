@@ -1,5 +1,27 @@
 # QA report
 
+## Pipeline hardening — 2026-10-06
+
+- All 147 Python tests and 30 frontend tests passed. Ruff, mypy, frontend type
+  checks, the production build, and the change whitespace check passed.
+- The eight changed detection/classification/assessment/configuration modules
+  have 94.03% combined statement coverage. Assessment and runtime configuration
+  validation have 100% coverage.
+- Reproduced nine failures before fixing them: low-confidence feet affecting
+  volley labels, unreliable ball evidence raising confidence, chronological
+  limits selecting the wrong player, duplicate metric evidence inflating scores,
+  missing contact still leaving measurements available, repeated sliding-window
+  swings being accepted, and closed analyzers still accepting frames.
+- Further regressions cover track reacquisition/teleports, discontinuous temporal
+  classifier input, internal camera gaps, finite configuration/rule validation,
+  corrupt official model weights, startup failure before native model allocation,
+  and frame/pose memory cleanup when native close fails.
+- Full repository coverage is 74.79%; the 85% gate remains failing because of
+  existing uncovered account/gateway/release code and partially covered storage
+  operations. No exclusions or threshold reductions were introduced.
+- Native pose smoke tests passed. Physical camera trials, real tennis accuracy,
+  and coach agreement remain unverified.
+
 ## Live shot and technique update — 2026-10-06
 
 - All 106 Python tests and 30 frontend tests passed. Ruff, mypy, and the frontend

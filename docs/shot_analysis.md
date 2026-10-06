@@ -35,6 +35,27 @@ rating of ball placement, power, spin, or match effectiveness. Live experimental
 coaching must be enabled, or the rules must have coach approval. Disabling the
 preview retains raw measurements and suppresses comparisons, scores, and tips.
 
+## Pipeline hardening
+
+Pipeline `baseline-3` checks runtime limits and feedback rules before loading a
+native model. Official pose weights are verified against their pinned SHA256.
+Confidence thresholds, target ranges, profile overrides, and rule uniqueness
+must be valid; textual `coach_validated` values cannot enable feedback.
+
+Track loss, abrupt position/scale changes, and camera gaps separate observation
+sequences. Shot phases and temporal classification cannot combine those sequences.
+Rolling live history retains a per-player minimum contact interval to avoid
+recounting nearby peaks. Frame/history/pending-shot limits remain enforced.
+
+Geometry-based labels require confident ankle measurements. Ball evidence must
+be finite, sufficiently confident, and directly detected; interpolation cannot
+raise shot confidence. Duplicate metrics and missing contact or interrupted
+shot windows cannot produce scores. Shutdown releases retained frame/pose memory
+even if native cleanup fails. Global offline shot limits keep chronological order.
+
+These guards improve software reliability. Tennis recognition and coaching
+accuracy still need real-session evaluation.
+
 ## First camera trial
 
 1. Run `npm run build`, then `courtside serve` in the activated Python environment.
