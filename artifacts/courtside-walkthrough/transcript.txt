@@ -1,0 +1,20 @@
+Your updated Courtside
+Here is a quick tour of your updated Courtside interface. The goal was to make it feel professional and easier to use on a phone. These screens use sample sessions, so the measurements are illustrations.
+
+A clearer workspace
+First, the desktop layout has a consistent green and warm white theme, clearer headings, and a simpler sidebar. The main pages are Live Court, Overview, Session Library, My Progress, and Coaching Notes. Settings and release checks sit in the workspace section.
+
+Your library on a phone
+On a phone, the header gives the workspace selector its own row. Page names stay readable, and buttons have more room to tap. The session library lets you search, filter by type or status, and switch between cards and a compact list. In list view, the status sits below each session title.
+
+Set up before you play
+Live Court puts the camera preview first and the setup panel below it. Choose a camera and confirm processing permission before starting. If a junior is present, guardian consent and player agreement are also required. The camera stays off until you start the feed.
+
+Review one shot at a time
+Open a session to review individual shots. On a phone, the shot picker comes before the selected shot. All shot filters remain visible, and the list scrolls within its panel. The report then shows the clip, technique measurements, and coaching observations.
+
+Readable charts and forms
+My Progress compares your sessions over time. The chart adapts to the screen width while keeping its labels readable. Upload dialogs also fit the phone screen, and their close button stays visible while you scroll.
+
+Ready to explore
+Finally, the menu works on both portrait and short landscape screens. The main pages were checked on phone and tablet sizes, and all twenty six frontend tests passed. Start in the session library to explore the examples, or open Live Court when you are ready to set up a session.

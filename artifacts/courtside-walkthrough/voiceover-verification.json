@@ -1,0 +1,26 @@
+[
+  {
+    "file": "C:\\Users\\Ali Haider\\Desktop\\tennis\\artifacts\\courtside-walkthrough\\courtside-walkthrough-voiceover.mp4",
+    "size_bytes": 3922978,
+    "full_decode": "passed",
+    "streams": [
+      "Duration: 00:02:05.90, start: 0.000000, bitrate: 249 kb/s",
+      "Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(progressive), 1920x1080, 136 kb/s, 24 fps, 24 tbr, 12288 tbn (default)",
+      "Stream #0:1[0x2](eng): Audio: aac (LC) (mp4a / 0x6134706D), 48000 Hz, mono, fltp, 107 kb/s (default)",
+      "Stream #0:2[0x3](eng): Data: bin_data (text / 0x74786574), 0 kb/s"
+    ],
+    "integrated_loudness_lufs": -16.36,
+    "true_peak_dbtp": -1.21
+  },
+  {
+    "file": "C:\\Users\\Ali Haider\\Desktop\\tennis\\artifacts\\courtside-walkthrough\\courtside-voiceover.mp3",
+    "size_bytes": 2518870,
+    "full_decode": "passed",
+    "streams": [
+      "Duration: 00:02:05.88, start: 0.023021, bitrate: 160 kb/s",
+      "Stream #0:0: Audio: mp3 (mp3float), 48000 Hz, mono, fltp, 160 kb/s"
+    ],
+    "integrated_loudness_lufs": -16.81,
+    "true_peak_dbtp": -1.66
+  }
+]

@@ -1,0 +1,20 @@
+version: baseline-2
+analysis_fps: 15
+max_width: 1280
+min_keypoint_confidence: 0.65
+smoothing_alpha: 0.45
+max_track_gap_seconds: 1.0
+max_ball_gap_seconds: 0.2
+min_shot_gap_seconds: 0.8
+wrist_speed_threshold: 1.0
+min_swing_displacement: 0.35
+stroke_side_margin: 0.15
+ball_contact_radius_torso: 1.5
+volley_max_swing_displacement: 1.8
+ball_hsv_lower: [20, 85, 100]
+ball_hsv_upper: [65, 255, 255]
+max_duration_seconds: 3600
+min_duration_seconds: 1
+max_shots: 500
+clip_before_seconds: 1.2
+clip_after_seconds: 1.5

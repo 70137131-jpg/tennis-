@@ -1,0 +1,38 @@
+;FFMETADATA1
+title=Courtside interface and mobile walkthrough
+comment=Actual app screenshots with illustrative sample sessions; narrated and captioned walkthrough.
+[CHAPTER]
+TIMEBASE=1/1000
+START=300
+END=14391
+title=Your updated Courtside
+[CHAPTER]
+TIMEBASE=1/1000
+START=14391
+END=32736
+title=A clearer workspace
+[CHAPTER]
+TIMEBASE=1/1000
+START=32736
+END=54221
+title=Your library on a phone
+[CHAPTER]
+TIMEBASE=1/1000
+START=54221
+END=72840
+title=Set up before you play
+[CHAPTER]
+TIMEBASE=1/1000
+START=72840
+END=91385
+title=Review one shot at a time
+[CHAPTER]
+TIMEBASE=1/1000
+START=91385
+END=106316
+title=Readable charts and forms
+[CHAPTER]
+TIMEBASE=1/1000
+START=106316
+END=125831
+title=Ready to explore

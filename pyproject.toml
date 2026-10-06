@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "courtside"
+version = "0.1.0"
+description = "Local-first tennis coaching from live camera tracking"
+requires-python = ">=3.11"
+dependencies = ["fastapi>=0.117,<1", "uvicorn>=0.37,<1", "websockets>=15,<17", "pydantic>=2.11,<3", "python-multipart>=0.0.20", "numpy>=1.26,<3", "opencv-contrib-python>=4.10,<5", "PyYAML>=6,<7", "imageio-ffmpeg>=0.6,<1"]
+
+[project.optional-dependencies]
+vision = ["mediapipe>=0.10.21,<0.11"]
+dev = ["pytest>=8,<10", "pytest-cov>=6,<8", "httpx>=0.28,<1", "ruff>=0.11", "mypy>=1.15", "types-PyYAML"]
+
+[project.scripts]
+courtside = "courtside.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src", "."]
+include = ["courtside*", "api*", "worker*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+check_untyped_defs = true
+exclude = [".venv", "node_modules", "web"]
+
+[tool.coverage.run]
+source = ["courtside", "api", "worker"]
+omit = ["*/demo.py", "*/__init__.py"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 85

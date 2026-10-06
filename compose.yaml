@@ -1,0 +1,17 @@
+services:
+  courtside:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      COURTSIDE_TOKEN: ${COURTSIDE_TOKEN:?Set a workspace token of at least 24 characters}
+      COURTSIDE_DEMO: "0"
+      COURTSIDE_RETENTION_DAYS: "30"
+      COURTSIDE_MAX_UPLOAD_MB: "1024"
+    volumes:
+      - courtside-data:/app/storage
+      - ./models:/app/models:ro
+    restart: unless-stopped
+    stop_grace_period: 15s
+volumes:
+  courtside-data:

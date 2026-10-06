@@ -1,0 +1,42 @@
+version: hypothesis-1
+# A qualified coach must approve this exact version before real tips are enabled.
+coach_validated: false
+min_confidence: 0.65
+max_tips_per_shot: 3
+max_tips_per_session: 5
+profiles:
+  junior:
+    knee_angle: [110, 160]
+    elbow_extension: [145, 180]
+  adult:
+    knee_angle: [105, 160]
+    elbow_extension: [145, 180]
+level_adjustments:
+  beginner: 8
+  intermediate: 4
+  competitive: 0
+rules:
+  - metric: knee_angle
+    shots: [serve, forehand, backhand]
+    phase: preparation
+    target: [110, 160]
+    severity: 2
+    title: Give your legs a little more room
+    explanation: Try a comfortable knee bend as you prepare. Review this camera-angle-dependent measurement with your coach.
+    joints: [11, 13, 15, 12, 14, 16]
+  - metric: elbow_extension
+    shots: [serve]
+    phase: contact
+    target: [145, 180]
+    severity: 3
+    title: Reach through your serve
+    explanation: Aim for a relaxed, extended hitting arm at contact. Talk to your coach about a comfortable motion.
+    joints: [6, 8, 10]
+  - metric: finish_height
+    shots: [forehand, backhand]
+    phase: finish
+    target: [0.7, 1.8]
+    severity: 1
+    title: Let the swing finish
+    explanation: Allow your hitting hand to finish higher after contact. This is a 2D wrist-height proxy rather than a racket-path measurement.
+    joints: [5, 6, 9, 10]

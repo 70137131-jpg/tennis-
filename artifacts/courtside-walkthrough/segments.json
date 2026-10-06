@@ -1,0 +1,122 @@
+[
+  {
+    "scene": "01",
+    "file": "01-01.wav",
+    "text": "Here is a quick tour of your updated Courtside interface."
+  },
+  {
+    "scene": "01",
+    "file": "01-02.wav",
+    "text": "The goal was to make it feel professional and easier to use on a phone."
+  },
+  {
+    "scene": "01",
+    "file": "01-03.wav",
+    "text": "These screens use sample sessions, so the measurements are illustrations."
+  },
+  {
+    "scene": "02",
+    "file": "02-01.wav",
+    "text": "First, the desktop layout has a consistent green and warm white theme, clearer headings, and a simpler sidebar."
+  },
+  {
+    "scene": "02",
+    "file": "02-02.wav",
+    "text": "The main pages are Live Court, Overview, Session Library, My Progress, and Coaching Notes."
+  },
+  {
+    "scene": "02",
+    "file": "02-03.wav",
+    "text": "Settings and release checks sit in the workspace section."
+  },
+  {
+    "scene": "03",
+    "file": "03-01.wav",
+    "text": "On a phone, the header gives the workspace selector its own row."
+  },
+  {
+    "scene": "03",
+    "file": "03-02.wav",
+    "text": "Page names stay readable, and buttons have more room to tap."
+  },
+  {
+    "scene": "03",
+    "file": "03-03.wav",
+    "text": "The session library lets you search, filter by type or status, and switch between cards and a compact list."
+  },
+  {
+    "scene": "03",
+    "file": "03-04.wav",
+    "text": "In list view, the status sits below each session title."
+  },
+  {
+    "scene": "04",
+    "file": "04-01.wav",
+    "text": "Live Court puts the camera preview first and the setup panel below it."
+  },
+  {
+    "scene": "04",
+    "file": "04-02.wav",
+    "text": "Choose a camera and confirm processing permission before starting."
+  },
+  {
+    "scene": "04",
+    "file": "04-03.wav",
+    "text": "If a junior is present, guardian consent and player agreement are also required."
+  },
+  {
+    "scene": "04",
+    "file": "04-04.wav",
+    "text": "The camera stays off until you start the feed."
+  },
+  {
+    "scene": "05",
+    "file": "05-01.wav",
+    "text": "Open a session to review individual shots."
+  },
+  {
+    "scene": "05",
+    "file": "05-02.wav",
+    "text": "On a phone, the shot picker comes before the selected shot."
+  },
+  {
+    "scene": "05",
+    "file": "05-03.wav",
+    "text": "All shot filters remain visible, and the list scrolls within its panel."
+  },
+  {
+    "scene": "05",
+    "file": "05-04.wav",
+    "text": "The report then shows the clip, technique measurements, and coaching observations."
+  },
+  {
+    "scene": "06",
+    "file": "06-01.wav",
+    "text": "My Progress compares your sessions over time."
+  },
+  {
+    "scene": "06",
+    "file": "06-02.wav",
+    "text": "The chart adapts to the screen width while keeping its labels readable."
+  },
+  {
+    "scene": "06",
+    "file": "06-03.wav",
+    "text": "Upload dialogs also fit the phone screen, and their close button stays visible while you scroll."
+  },
+  {
+    "scene": "07",
+    "file": "07-01.wav",
+    "text": "Finally, the menu works on both portrait and short landscape screens."
+  },
+  {
+    "scene": "07",
+    "file": "07-02.wav",
+    "text": "The main pages were checked on phone and tablet sizes, and all twenty six frontend tests passed."
+  },
+  {
+    "scene": "07",
+    "file": "07-03.wav",
+    "text": "Start in the session library to explore the examples, or open Live Court when you are ready to set up a session."
+  }
+]

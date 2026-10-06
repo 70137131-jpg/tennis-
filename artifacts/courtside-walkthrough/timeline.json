@@ -1,0 +1,218 @@
+[
+  {
+    "scene": "01",
+    "file": "01-01.wav",
+    "text": "Here is a quick tour of your updated Courtside interface.",
+    "start": 0.3,
+    "duration": 3.9788208616780047,
+    "end": 4.278820861678005,
+    "frame_duration": 4.338820861678005
+  },
+  {
+    "scene": "01",
+    "file": "01-02.wav",
+    "text": "The goal was to make it feel professional and easier to use on a phone.",
+    "start": 4.338820861678005,
+    "duration": 4.293605442176871,
+    "end": 8.632426303854874,
+    "frame_duration": 4.35360544217687
+  },
+  {
+    "scene": "01",
+    "file": "01-03.wav",
+    "text": "These screens use sample sessions, so the measurements are illustrations.",
+    "start": 8.692426303854875,
+    "duration": 4.998639455782313,
+    "end": 13.691065759637187,
+    "frame_duration": 5.698639455782313
+  },
+  {
+    "scene": "02",
+    "file": "02-01.wav",
+    "text": "First, the desktop layout has a consistent green and warm white theme, clearer headings, and a simpler sidebar.",
+    "start": 14.391065759637186,
+    "duration": 7.413015873015873,
+    "end": 21.80408163265306,
+    "frame_duration": 7.473015873015872
+  },
+  {
+    "scene": "02",
+    "file": "02-02.wav",
+    "text": "The main pages are Live Court, Overview, Session Library, My Progress, and Coaching Notes.",
+    "start": 21.864081632653058,
+    "duration": 6.398321995464853,
+    "end": 28.26240362811791,
+    "frame_duration": 6.4583219954648525
+  },
+  {
+    "scene": "02",
+    "file": "02-03.wav",
+    "text": "Settings and release checks sit in the workspace section.",
+    "start": 28.322403628117907,
+    "duration": 3.713786848072562,
+    "end": 32.03619047619047,
+    "frame_duration": 4.413786848072562
+  },
+  {
+    "scene": "03",
+    "file": "03-01.wav",
+    "text": "On a phone, the header gives the workspace selector its own row.",
+    "start": 32.73619047619047,
+    "duration": 4.373741496598639,
+    "end": 37.10993197278911,
+    "frame_duration": 4.433741496598639
+  },
+  {
+    "scene": "03",
+    "file": "03-02.wav",
+    "text": "Page names stay readable, and buttons have more room to tap.",
+    "start": 37.169931972789115,
+    "duration": 4.373741496598639,
+    "end": 41.543673469387755,
+    "frame_duration": 4.433741496598639
+  },
+  {
+    "scene": "03",
+    "file": "03-03.wav",
+    "text": "The session library lets you search, filter by type or status, and switch between cards and a compact list.",
+    "start": 41.60367346938776,
+    "duration": 7.618004535147392,
+    "end": 49.22167800453515,
+    "frame_duration": 7.678004535147392
+  },
+  {
+    "scene": "03",
+    "file": "03-04.wav",
+    "text": "In list view, the status sits below each session title.",
+    "start": 49.28167800453515,
+    "duration": 4.238866213151927,
+    "end": 53.52054421768708,
+    "frame_duration": 4.938866213151927
+  },
+  {
+    "scene": "04",
+    "file": "04-01.wav",
+    "text": "Live Court puts the camera preview first and the setup panel below it.",
+    "start": 54.220544217687085,
+    "duration": 4.583537414965987,
+    "end": 58.80408163265307,
+    "frame_duration": 4.643537414965986
+  },
+  {
+    "scene": "04",
+    "file": "04-02.wav",
+    "text": "Choose a camera and confirm processing permission before starting.",
+    "start": 58.864081632653075,
+    "duration": 4.303673469387755,
+    "end": 63.16775510204083,
+    "frame_duration": 4.363673469387755
+  },
+  {
+    "scene": "04",
+    "file": "04-03.wav",
+    "text": "If a junior is present, guardian consent and player agreement are also required.",
+    "start": 63.22775510204083,
+    "duration": 5.558231292517007,
+    "end": 68.78598639455784,
+    "frame_duration": 5.618231292517007
+  },
+  {
+    "scene": "04",
+    "file": "04-04.wav",
+    "text": "The camera stays off until you start the feed.",
+    "start": 68.84598639455784,
+    "duration": 3.294013605442177,
+    "end": 72.14000000000001,
+    "frame_duration": 3.994013605442177
+  },
+  {
+    "scene": "05",
+    "file": "05-01.wav",
+    "text": "Open a session to review individual shots.",
+    "start": 72.84000000000002,
+    "duration": 3.2390022675736962,
+    "end": 76.07900226757371,
+    "frame_duration": 3.2990022675736963
+  },
+  {
+    "scene": "05",
+    "file": "05-02.wav",
+    "text": "On a phone, the shot picker comes before the selected shot.",
+    "start": 76.13900226757372,
+    "duration": 4.298820861678005,
+    "end": 80.43782312925173,
+    "frame_duration": 4.358820861678004
+  },
+  {
+    "scene": "05",
+    "file": "05-03.wav",
+    "text": "All shot filters remain visible, and the list scrolls within its panel.",
+    "start": 80.49782312925173,
+    "duration": 4.8684807256235825,
+    "end": 85.36630385487531,
+    "frame_duration": 4.928480725623582
+  },
+  {
+    "scene": "05",
+    "file": "05-04.wav",
+    "text": "The report then shows the clip, technique measurements, and coaching observations.",
+    "start": 85.42630385487531,
+    "duration": 5.25859410430839,
+    "end": 90.6848979591837,
+    "frame_duration": 5.95859410430839
+  },
+  {
+    "scene": "06",
+    "file": "06-01.wav",
+    "text": "My Progress compares your sessions over time.",
+    "start": 91.3848979591837,
+    "duration": 3.3889795918367347,
+    "end": 94.77387755102043,
+    "frame_duration": 3.4489795918367347
+  },
+  {
+    "scene": "06",
+    "file": "06-02.wav",
+    "text": "The chart adapts to the screen width while keeping its labels readable.",
+    "start": 94.83387755102044,
+    "duration": 4.313650793650794,
+    "end": 99.14752834467123,
+    "frame_duration": 4.373650793650794
+  },
+  {
+    "scene": "06",
+    "file": "06-03.wav",
+    "text": "Upload dialogs also fit the phone screen, and their close button stays visible while you scroll.",
+    "start": 99.20752834467123,
+    "duration": 6.408253968253968,
+    "end": 105.6157823129252,
+    "frame_duration": 7.108253968253968
+  },
+  {
+    "scene": "07",
+    "file": "07-01.wav",
+    "text": "Finally, the menu works on both portrait and short landscape screens.",
+    "start": 106.31578231292521,
+    "duration": 5.1236281179138325,
+    "end": 111.43941043083905,
+    "frame_duration": 5.183628117913832
+  },
+  {
+    "scene": "07",
+    "file": "07-02.wav",
+    "text": "The main pages were checked on phone and tablet sizes, and all twenty six frontend tests passed.",
+    "start": 111.49941043083905,
+    "duration": 6.568299319727891,
+    "end": 118.06770975056693,
+    "frame_duration": 6.6282993197278905
+  },
+  {
+    "scene": "07",
+    "file": "07-03.wav",
+    "text": "Start in the session library to explore the examples, or open Live Court when you are ready to set up a session.",
+    "start": 118.12770975056694,
+    "duration": 7.003083900226757,
+    "end": 125.13079365079369,
+    "frame_duration": 7.7030839002267575
+  }
+]

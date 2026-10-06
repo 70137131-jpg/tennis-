@@ -1,0 +1,95 @@
+1
+00:00:00,300 --> 00:00:04,279
+Here is a quick tour of your updated Courtside interface.
+
+2
+00:00:04,339 --> 00:00:08,632
+The goal was to make it feel professional and easier to use on a phone.
+
+3
+00:00:08,692 --> 00:00:13,691
+These screens use sample sessions, so the measurements are illustrations.
+
+4
+00:00:14,391 --> 00:00:21,804
+First, the desktop layout has a consistent green and warm white theme, clearer headings, and a simpler sidebar.
+
+5
+00:00:21,864 --> 00:00:28,262
+The main pages are Live Court, Overview, Session Library, My Progress, and Coaching Notes.
+
+6
+00:00:28,322 --> 00:00:32,036
+Settings and release checks sit in the workspace section.
+
+7
+00:00:32,736 --> 00:00:37,110
+On a phone, the header gives the workspace selector its own row.
+
+8
+00:00:37,170 --> 00:00:41,544
+Page names stay readable, and buttons have more room to tap.
+
+9
+00:00:41,604 --> 00:00:49,222
+The session library lets you search, filter by type or status, and switch between cards and a compact list.
+
+10
+00:00:49,282 --> 00:00:53,521
+In list view, the status sits below each session title.
+
+11
+00:00:54,221 --> 00:00:58,804
+Live Court puts the camera preview first and the setup panel below it.
+
+12
+00:00:58,864 --> 00:01:03,168
+Choose a camera and confirm processing permission before starting.
+
+13
+00:01:03,228 --> 00:01:08,786
+If a junior is present, guardian consent and player agreement are also required.
+
+14
+00:01:08,846 --> 00:01:12,140
+The camera stays off until you start the feed.
+
+15
+00:01:12,840 --> 00:01:16,079
+Open a session to review individual shots.
+
+16
+00:01:16,139 --> 00:01:20,438
+On a phone, the shot picker comes before the selected shot.
+
+17
+00:01:20,498 --> 00:01:25,366
+All shot filters remain visible, and the list scrolls within its panel.
+
+18
+00:01:25,426 --> 00:01:30,685
+The report then shows the clip, technique measurements, and coaching observations.
+
+19
+00:01:31,385 --> 00:01:34,774
+My Progress compares your sessions over time.
+
+20
+00:01:34,834 --> 00:01:39,148
+The chart adapts to the screen width while keeping its labels readable.
+
+21
+00:01:39,208 --> 00:01:45,616
+Upload dialogs also fit the phone screen, and their close button stays visible while you scroll.
+
+22
+00:01:46,316 --> 00:01:51,439
+Finally, the menu works on both portrait and short landscape screens.
+
+23
+00:01:51,499 --> 00:01:58,068
+The main pages were checked on phone and tablet sizes, and all twenty six frontend tests passed.
+
+24
+00:01:58,128 --> 00:02:05,131
+Start in the session library to explore the examples, or open Live Court when you are ready to set up a session.

@@ -1,0 +1,112 @@
+[
+  {
+    "id": "01",
+    "title": "Your updated Courtside",
+    "label": "A QUICK TOUR",
+    "bullets": [
+      "A consistent professional interface",
+      "Layouts built for phones and tablets",
+      "Actual screens with illustrative sessions"
+    ],
+    "text": "Here is a quick tour of your updated Courtside interface. The goal was to make it feel professional and easier to use on a phone. These screens use sample sessions, so the measurements are illustrations.",
+    "images": [
+      "overview.jpg",
+      "library.jpg"
+    ],
+    "layout": "intro"
+  },
+  {
+    "id": "02",
+    "title": "A clearer workspace",
+    "label": "DESKTOP DESIGN",
+    "bullets": [
+      "Consistent color, spacing and typography",
+      "Five main pages in the sidebar",
+      "Settings and release checks grouped below"
+    ],
+    "text": "First, the desktop layout has a consistent green and warm white theme, clearer headings, and a simpler sidebar. The main pages are Live Court, Overview, Session Library, My Progress, and Coaching Notes. Settings and release checks sit in the workspace section.",
+    "images": [
+      "overview.jpg"
+    ],
+    "layout": "desktop"
+  },
+  {
+    "id": "03",
+    "title": "Your library on a phone",
+    "label": "MOBILE LIBRARY",
+    "bullets": [
+      "Workspace selector gets its own row",
+      "Search and filter your sessions",
+      "List status sits below the session title"
+    ],
+    "text": "On a phone, the header gives the workspace selector its own row. Page names stay readable, and buttons have more room to tap. The session library lets you search, filter by type or status, and switch between cards and a compact list. In list view, the status sits below each session title.",
+    "images": [
+      "library.jpg"
+    ],
+    "layout": "phone"
+  },
+  {
+    "id": "04",
+    "title": "Set up before you play",
+    "label": "LIVE COURT",
+    "bullets": [
+      "Camera preview comes first",
+      "Permission and junior fields stay together",
+      "The camera remains off until you start"
+    ],
+    "text": "Live Court puts the camera preview first and the setup panel below it. Choose a camera and confirm processing permission before starting. If a junior is present, guardian consent and player agreement are also required. The camera stays off until you start the feed.",
+    "images": [
+      "live.jpg",
+      "setup.jpg"
+    ],
+    "layout": "phones"
+  },
+  {
+    "id": "05",
+    "title": "Review one shot at a time",
+    "label": "SESSION REPORTS",
+    "bullets": [
+      "Choose a shot before reviewing its clip",
+      "All shot filters stay visible",
+      "Measurements and evidence follow below"
+    ],
+    "text": "Open a session to review individual shots. On a phone, the shot picker comes before the selected shot. All shot filters remain visible, and the list scrolls within its panel. The report then shows the clip, technique measurements, and coaching observations.",
+    "images": [
+      "picker.jpg",
+      "report.jpg"
+    ],
+    "layout": "phones"
+  },
+  {
+    "id": "06",
+    "title": "Readable charts and forms",
+    "label": "PROGRESS & UPLOAD",
+    "bullets": [
+      "Chart labels keep a readable size",
+      "Forms fit the available screen",
+      "Dialog close buttons stay within reach"
+    ],
+    "text": "My Progress compares your sessions over time. The chart adapts to the screen width while keeping its labels readable. Upload dialogs also fit the phone screen, and their close button stays visible while you scroll.",
+    "images": [
+      "progress.jpg",
+      "upload.jpg"
+    ],
+    "layout": "phones"
+  },
+  {
+    "id": "07",
+    "title": "Ready to explore",
+    "label": "NAVIGATION & CHECKS",
+    "bullets": [
+      "Portrait and landscape navigation",
+      "Phone and tablet layouts checked",
+      "26 frontend tests and build passed"
+    ],
+    "text": "Finally, the menu works on both portrait and short landscape screens. The main pages were checked on phone and tablet sizes, and all twenty six frontend tests passed. Start in the session library to explore the examples, or open Live Court when you are ready to set up a session.",
+    "images": [
+      "navigation.jpg",
+      "landscape.jpg"
+    ],
+    "layout": "closing"
+  }
+]
