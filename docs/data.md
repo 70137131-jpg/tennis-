@@ -19,5 +19,13 @@ minors appear. The manifest checks evidence fields; legal consent is a human rec
 Start with a few hundred reviewed shots per class, multiple players and independent
 sessions. Use a local annotation tool of your choice to mark start/contact/end,
 type and player identity. Hand-correct small pose/ball/court subsets for evaluation.
-No third-party training data is bundled or downloaded. See `data/README.md` and
-`docs/training.md`.
+Third-party data is not bundled in Git. Two external CC BY datasets are registered
+for local staging with publisher checksum verification and attribution; see
+`data/README.md` and `docs/dataset_setup.md`. Staging does not make data eligible
+for `courtside train` or attest participant consent. See `docs/training.md` for
+the current reviewed, own-consented manifest requirements.
+
+Experimental baselines on the original public labels use a separate workflow,
+documented in `docs/external_training.md`. Their source/split records stay in the
+ignored model output directory, declare external origin and unverified player
+separation, and do not change the app's consent or promotion checks.

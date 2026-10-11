@@ -151,6 +151,10 @@ def create_app(
         signature = hmac.new(signing_key, f"{sid}/{asset}:{expires}".encode(), hashlib.sha256).hexdigest()
         return f"{media_prefix}/api/media/{sid}/{asset}?expires={expires}&signature={signature}"
 
+    from api.match import register_match
+
+    register_match(app, store, authorize, get_session, signed_url)
+
     @app.get("/api/auth/config")
     def auth_config():
         return {"enabled": False, "setup_available": False}
@@ -216,6 +220,8 @@ def create_app(
         get_session(sid)
         with store.connection() as db:
             db.execute("DELETE FROM reviews WHERE session_id=?", (sid,))
+            for table in ("match_states", "match_actions", "line_reviews", "highlight_exports"):
+                db.execute(f"DELETE FROM {table} WHERE session_id=?", (sid,))
             db.execute("DELETE FROM sessions WHERE id=?", (sid,))
         shutil.rmtree(store.root / "sessions" / sid, ignore_errors=True)
         return {"deleted": sid}
@@ -373,7 +379,7 @@ def create_app(
             raise HTTPException(403, "This private media link has expired. Refresh the report.")
         get_session(sid)
         if not re.fullmatch(r"(?:[a-f0-9]{24}|demo-[1-6])", sid) or not re.fullmatch(
-            r"(?:poster\.jpg|annotated\.mp4|demo\.mp4|shot-\d{4}\.mp4)", asset
+            r"(?:poster\.jpg|annotated\.mp4|demo\.mp4|shot-\d{4}\.mp4|highlight-[a-f0-9]{24}\.mp4)", asset
         ):
             raise HTTPException(404, "Asset not found")
         path = store.root / "sessions" / sid / asset
