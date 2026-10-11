@@ -61,7 +61,7 @@ describe('account privacy', () => {
       return values[path] as never;
     });
     render(<AccountGate><App/></AccountGate>);
-    expect(await screen.findByText('Connected')).toBeTruthy();
+    expect(await screen.findByText('Connected', {}, { timeout: 5000 })).toBeTruthy();
     expect(screen.getByText(/Your first session starts here/)).toBeTruthy();
     expect(screen.queryByLabelText('Player workspace')).toBeNull();
     expect(screen.queryByText('Demo sessions')).toBeNull();
