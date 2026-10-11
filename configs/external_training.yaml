@@ -1,0 +1,14 @@
+version: external-baselines-1
+seed: 42
+epochs: 800
+learning_rate: 0.025
+l2: 0.005
+video_sample_frames: 16
+pose_confidence: 0.5
+min_pose_frames: 3
+image_train_end: 300
+image_validation_start: 320
+image_validation_end: 400
+image_test_start: 420
+video_train_pairs: 70
+video_validation_start: 79

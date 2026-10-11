@@ -47,6 +47,8 @@ def cleanup(store):
         ).fetchall()
         for row in expired:
             db.execute("DELETE FROM reviews WHERE session_id=?", (row[0],))
+            for table in ('match_states', 'match_actions', 'line_reviews', 'highlight_exports'):
+                db.execute(f"DELETE FROM {table} WHERE session_id=?", (row[0],))
             db.execute("DELETE FROM sessions WHERE id=?", (row[0],))
         abandoned = db.execute(
             "SELECT id FROM uploads WHERE created_at<?",

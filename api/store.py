@@ -33,6 +33,15 @@ class Store:
                   shot_id TEXT NOT NULL, tip_id TEXT NOT NULL, rating TEXT NOT NULL,
                   correction TEXT NOT NULL, created_at TEXT NOT NULL,
                   UNIQUE(session_id, shot_id, tip_id));
+                CREATE TABLE IF NOT EXISTS match_states (session_id TEXT PRIMARY KEY, payload TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS match_actions (
+                  session_id TEXT NOT NULL, request_id TEXT NOT NULL, digest TEXT NOT NULL,
+                  PRIMARY KEY(session_id,request_id));
+                CREATE TABLE IF NOT EXISTS line_reviews (
+                  id TEXT PRIMARY KEY, session_id TEXT NOT NULL, payload TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS highlight_exports (
+                  id TEXT PRIMARY KEY, session_id TEXT NOT NULL, status TEXT NOT NULL,
+                  error TEXT, filename TEXT NOT NULL, created_at TEXT NOT NULL);
             """)
             default = {
                 "display_name": "Ali",

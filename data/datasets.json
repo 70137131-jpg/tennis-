@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "checked_on": "2026-10-07",
+  "datasets": [
+    {
+      "id": "tennis-player-actions",
+      "title": "Tennis Player Actions Dataset for Human Pose Estimation",
+      "provider_id": "nv3rpsxhhk",
+      "version": 1,
+      "doi": "10.17632/nv3rpsxhhk.1",
+      "source": "https://data.mendeley.com/datasets/nv3rpsxhhk/1",
+      "metadata_url": "https://data.mendeley.com/public-api/datasets/nv3rpsxhhk/snapshot/1",
+      "archive_url": "https://prod-dcd-datasets-cache-zipfiles.s3.eu-west-1.amazonaws.com/nv3rpsxhhk-1.zip",
+      "archive_size_bytes": 527460551,
+      "archive_sha256": "7cc679bb33f6c9dd85f970a378f64d55fbbaab4306f53580b6e78907c6f50fea",
+      "unpacked_size_bytes": 533372928,
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "authors": ["Chun-Yi Wang", "Kalin Guanlun Lai", "Hsu-Chun Huang", "Wei-Ting Lin"],
+      "expected_files": {".jpg_or_jpeg": 2000, ".json": 4},
+      "use": "Supplementary pose evaluation or still-image action experiments",
+      "training_ready": false,
+      "missing_for_current_trainer": ["volley examples", "continuous pose sequences", "reviewed shot boundaries and contact times", "documented participant provenance"]
+    },
+    {
+      "id": "tennis-paired-views",
+      "title": "Tennis Shot Side-View and Top-View Data Set for Player Analysis in Tennis",
+      "provider_id": "75m8vz7jr2",
+      "version": 3,
+      "doi": "10.17632/75m8vz7jr2.3",
+      "source": "https://data.mendeley.com/datasets/75m8vz7jr2/3",
+      "metadata_url": "https://data.mendeley.com/public-api/datasets/75m8vz7jr2/snapshot/3",
+      "archive_url": "https://prod-dcd-datasets-cache-zipfiles.s3.eu-west-1.amazonaws.com/75m8vz7jr2-3.zip",
+      "archive_size_bytes": 2593282223,
+      "archive_sha256": "bd462b9bf3ba516630b8b4026b99802853ca165c8f6d583c437daf5f5434b71a",
+      "unpacked_size_bytes": 2601104000,
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "authors": ["Kalin Guanlun Lai", "Hsu-Chun Huang", "Shang-Yi Lin", "Wei-Ting Lin", "Kawuu Weicheng Lin"],
+      "expected_files": {".mp4": 472, ".csv": 4},
+      "use": "Video motion, shot direction and landing-point experiments",
+      "training_ready": false,
+      "missing_for_current_trainer": ["reviewed four-class shot labels", "pose extraction", "reviewed shot boundaries and contact times", "documented participant provenance"],
+      "split_rule": "Keep corresponding Side-View and Top-View clips together; split by session and every player"
+    }
+  ],
+  "catalog_only": [
+    {"id": "thetis", "source": "https://github.com/THETIS-dataset/dataset", "reason": "Research access; commercial training permission unverified"},
+    {"id": "f3set-tennis", "source": "https://github.com/F3Set/F3Set/tree/main/data/f3set-tennis", "reason": "Academic research only; footage access and rights separate"},
+    {"id": "tracknetv4", "source": "https://tracknetv4.github.io/", "reason": "Research-only agreement; provider access request required"},
+    {"id": "tennis-court-detector", "source": "https://github.com/yastrebksv/TennisCourtDetector", "reason": "No explicit dataset license verified"}
+  ]
+}

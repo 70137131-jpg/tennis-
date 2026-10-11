@@ -1,5 +1,51 @@
 # QA report
 
+## External baseline training — 2026-10-08
+
+- `data/train_external.py` implements separate public-label action-image and
+  video-direction softmax experiments. It preserves the original labels and
+  existing app consent/promotion checks. Raw sources and pose-model hashes are
+  verified before training; feature caches are fingerprinted.
+- All 177 Python tests passed, including nine external-training regressions.
+  Ruff and mypy passed for both data scripts and existing Python source/tests.
+  Tests check keypoint normalization/visibility, label-independent motion crops,
+  paired-view groups, split gaps, checksum changes, exact duplicates, training-only
+  standardization/checkpoint selection, class schemas and app-promotion rejection.
+- Full repository coverage is 74.87%, below the unchanged 85% gate. The previously
+  uncovered account/gateway/release code remains outside this change.
+- The image action run used 1,199 training, 320 validation and 320 test poses:
+  test accuracy 0.85625 and macro F1 0.85255. Its saved features reproduce those
+  scores, its model fingerprint passes verification, and active-app inference
+  rejects the external artifact. These are annotated-pose classification scores;
+  player/session independence and automatic vision accuracy are unverified.
+- The video-direction run used 280 training, 80 validation and 75 outdoor test
+  clips: test accuracy 0.54667 and macro F1 0.46697, versus majority accuracy
+  0.53333. Exclusions were 36 split-gap clips and one inadequate-pose test clip.
+  Validation accuracy 0.925 did not transfer to the outdoor domain. Both actual
+  artifacts passed full score replay, fingerprint, disjoint group/file-hash and
+  active-app rejection checks. Results and limitations are in
+  `docs/external_training.md`; neither model was promoted or enabled in the app.
+
+## External dataset staging — 2026-10-07
+
+- Both enabled datasets completed at `D:\CourtsideData`: 2,004 action-image and
+  annotation files, and 476 paired-video and CSV files. Every source file passed
+  publisher SHA256 verification. The video views have 236 matching clip IDs and
+  236 landing-point rows; a sample from each view decoded successfully.
+- All 168 Python tests passed, including 21 dataset-acquisition regressions. Ruff
+  and mypy passed for the downloader and existing Python source/tests.
+- Download tests cover checksum corruption, refetching a corrupt completed
+  partial, range resume/restart, unavailable ZIP fallback, publisher folder paths,
+  unsafe ZIP members, symlinks, case collisions, license changes, insufficient
+  space and incomplete inventories. They use local fixtures and no remote data.
+- Full repository coverage remains 74.79%; the configured 85% gate fails, matching
+  the previously documented uncovered account/gateway/release and storage code.
+  No exclusions or threshold reductions were introduced.
+- Dataset versions, published CC BY terms and provider hashes are recorded in
+  `data/datasets.json`. Original downloads and generated local inventories stay
+  outside Git. Acquisition does not change training consent checks or promote a
+  model, and no tennis-accuracy or coaching-validation claim is made.
+
 ## Pipeline hardening — 2026-10-06
 
 - All 147 Python tests and 30 frontend tests passed. Ruff, mypy, frontend type

@@ -1,20 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { LayoutDashboard, Video, ChartNoAxesCombined, MessageSquareText, Settings as SettingsIcon, CircleHelp, Plus, ChevronDown, ArrowUpRight, Bell, Menu, X, Search, ArrowRight, Upload, ShieldCheck, Camera, Check, WifiOff } from 'lucide-react';
 import type { Review, Session, Settings } from './types';
-import { API, ApiError, preserveMedia, request } from './api';
+import { ApiError, preserveMedia, request } from './api';
 import ProductionPage from './ProductionPage';
 import { AccountControls, useWorkspaceAccount } from './AccountGate';
 import { demoSessions, defaultSettings } from './demo';
 import { BallMark, Modal } from './components';
-import Dashboard from './Dashboard';
+import { SwingHome, SwingLibrary } from './SwingViews';
 import LivePage from './LivePage';
 import './live.css';
-import { Library, Notes, Progress, SettingsPage } from './Pages';
+import { Notes, Progress, SettingsPage } from './Pages';
 import UploadDialog from './UploadDialog';
 import SessionReport from './SessionReport';
 
-const navItems=[{id:'live',label:'Live court',icon:Camera},{id:'overview',label:'Overview',icon:LayoutDashboard},{id:'sessions',label:'Session library',icon:Video},{id:'progress',label:'My progress',icon:ChartNoAxesCombined},{id:'notes',label:'Coaching notes',icon:MessageSquareText}];
-const readRoute=()=>window.location.hash.slice(1)||'live';
+const navItems=[{id:'overview',label:'Home',icon:LayoutDashboard},{id:'sessions',label:'Sessions',icon:Video},{id:'live',label:'Live camera',icon:Camera},{id:'progress',label:'Stats',icon:ChartNoAxesCombined},{id:'notes',label:'Coaching',icon:MessageSquareText}];
+const readRoute=()=>window.location.hash.slice(1)||'sessions';
 function savedSettings(): Settings {try{return {...defaultSettings,...JSON.parse(localStorage.getItem('courtside-settings')||'{}')};}catch{return defaultSettings;}}
 
 export default function App() {
@@ -71,10 +71,10 @@ export default function App() {
     <a href="#main-content" className="skip-link" onClick={event=>{event.preventDefault();document.getElementById('main-content')?.focus();}}>Skip to content</a>
     {mobile&&<div className="mobile-backdrop" onClick={()=>setMobile(false)}/>}
     <aside ref={sidebar} id="workspace-navigation" className={'sidebar ' + (mobile?'open':'')} inert={compact&&!mobile} role={mobile?'dialog':undefined} aria-modal={mobile?true:undefined} aria-label={mobile?'Workspace navigation':undefined}>
-      <div className="brand-row"><button className="brand" onClick={()=>navigate('live')} aria-label="Courtside home"><BallMark/><span>courtside<span className="brand-dot">.</span></span></button>
+      <div className="brand-row"><button className="brand" onClick={()=>navigate('sessions')} aria-label="Courtside home"><BallMark/><span>courtside<span className="brand-dot">.</span></span></button>
         <button className="icon-button sidebar-close" onClick={()=>setMobile(false)} aria-label="Close navigation"><X size={20}/></button>
       </div>
-      <div className="workspace-label">TENNIS PERFORMANCE WORKSPACE</div>
+      <div className="workspace-label">SEE YOUR GAME. IMPROVE YOUR GAME.</div>
       <div className="sidebar-divider"/><div className="nav-caption">YOUR GAME</div>
       <nav aria-label="Main navigation">{navItems.map(({id,label,icon:Icon})=>
         <button key={id} className={'nav-item ' + (activePage===id?'active':'')} onClick={()=>navigate(id)} aria-current={activePage===id?'page':undefined}>
@@ -94,7 +94,7 @@ export default function App() {
     </aside>
     <div className="main-shell" inert={mobile}><header className="topbar">
       <div className="topbar-left"><button ref={mobileTrigger} className="icon-button mobile-menu" onClick={()=>setMobile(!mobile)} aria-label="Open navigation" aria-expanded={mobile} aria-controls="workspace-navigation"><Menu size={22}/></button>
-        <span className="breadcrumb-parent">Workspace</span><span className="breadcrumb-slash">/</span><span className="breadcrumb-current">{pageLabel}</span>
+        <span className="sv-sport"><BallMark small/>Tennis</span><span className="breadcrumb-slash">/</span><span className="breadcrumb-current">{pageLabel}</span>
       </div>
       <div className="topbar-right">
         <span className={'server-indicator ' + (online?'connected':'')} title={online?'Connected to local analysis':connection==='locked'?'Workspace access required':connection==='connecting'?'Connecting to local analysis':'Local analysis is offline'}>
@@ -110,8 +110,8 @@ export default function App() {
       </div>
     </header>
     <main id="main-content" className="main-content" tabIndex={-1}>{connection==='locked'&&<div className="connection-banner"><ShieldCheck size={16}/><span>Your private server requires an access token.</span><button onClick={()=>navigate('settings')}>Connect in Settings<ArrowRight size={14}/></button></div>}{connection==='offline'&&mode==='real'&&<div className="connection-banner"><WifiOff size={16}/><span>The local server is offline. Start Courtside to access your real sessions.</span><button onClick={()=>void refresh()}>Reconnect<ArrowRight size={14}/></button></div>}
-      {selectedId?(selected?<SessionReport session={selected} online={online} onBack={()=>navigate('sessions')} onDelete={deleteSession} notify={notify} refresh={refresh}/>:<div className="empty-state"><Video size={28}/><h2>Session not found</h2><p>It may have been deleted, or the local server is disconnected.</p><button className="primary-button" onClick={()=>navigate('sessions')}>Back to session library</button></div>):activePage==='live'?<LivePage settings={settings} online={online} modelReady={modelReady}/>:activePage==='production'?<ProductionPage/>:activePage==='sessions'?<Library sessions={visible} onUpload={()=>setUpload(true)} onOpen={id=>navigate(`session/${id}`)}/>:activePage==='progress'?<Progress sessions={visible}/>:activePage==='notes'?<Notes sessions={visible} online={online} reviews={reviews} onOpen={id=>navigate(`session/${id}`)}/>:activePage==='settings'?<SettingsPage settings={settings} online={online} modelReady={modelReady} onSave={saveSettings} onReconnect={refresh} notify={notify}/>:<Dashboard sessions={visible} settings={settings} onUpload={()=>setUpload(true)} onOpen={id=>navigate(`session/${id}`)} navigate={navigate}/>}
-    </main></div>{toast&&<div className="toast" role="status"><Check size={16}/>{toast}<button onClick={()=>setToast('')} aria-label="Dismiss message"><X size={14}/></button></div>}
+      {selectedId?(selected?<SessionReport key={selected.id} session={selected} online={online} onBack={()=>navigate('sessions')} onDelete={deleteSession} notify={notify} refresh={refresh}/>:<div className="empty-state"><Video size={28}/><h2>Session not found</h2><p>It may have been deleted, or the local server is disconnected.</p><button className="primary-button" onClick={()=>navigate('sessions')}>Back to session library</button></div>):activePage==='live'?<LivePage settings={settings} online={online} modelReady={modelReady}/>:activePage==='production'?<ProductionPage/>:activePage==='sessions'?<SwingLibrary onRecord={()=>navigate('live')} sessions={visible} onUpload={()=>setUpload(true)} onOpen={id=>navigate(`session/${id}`)}/>:activePage==='progress'?<Progress sessions={visible}/>:activePage==='notes'?<Notes sessions={visible} online={online} reviews={reviews} onOpen={id=>navigate(`session/${id}`)}/>:activePage==='settings'?<SettingsPage settings={settings} online={online} modelReady={modelReady} onSave={saveSettings} onReconnect={refresh} notify={notify}/>:<SwingHome sessions={visible} settings={settings} onUpload={()=>setUpload(true)} onOpen={id=>navigate(`session/${id}`)} navigate={navigate}/>}
+    </main><nav className="sv-bottom-nav" aria-label="Mobile navigation">{[{id:'overview',label:'Home',icon:LayoutDashboard},{id:'sessions',label:'Sessions',icon:Video},{id:'live',label:'Live',icon:Camera},{id:'progress',label:'Stats',icon:ChartNoAxesCombined},{id:'settings',label:'Profile',icon:SettingsIcon}].map(({id,label,icon:Icon})=><button key={id} className={activePage===id?'active':''} aria-current={activePage===id?'page':undefined} onClick={()=>navigate(id)}><Icon size={21}/><span>{label}</span></button>)}</nav></div>{toast&&<div className="toast" role="status"><Check size={16}/>{toast}<button onClick={()=>setToast('')} aria-label="Dismiss message"><X size={14}/></button></div>}
     {upload&&<UploadDialog settings={settings} online={online} onClose={()=>setUpload(false)} onComplete={session=>{setSessions(rows=>[session,...rows]);setUpload(false);changeMode('real');navigate(`session/${session.id}`);notify('Session uploaded. Analysis is queued.');}}/>}
     {help&&<Modal title="Getting started" subtitle="Set up your camera, analyze a session and review your measurements." onClose={()=>setHelp(false)} wide><div className="help-steps">{[{icon:Camera,title:'Set up your camera',text:'Place a fixed camera behind the baseline, centered and elevated 3–5 m. Aim for 1080p, 60 fps and a fast shutter. Keep both players in frame.'},{icon:Upload,title:'Bring your session to Courtside',text:'Upload an MP4 or MOV, choose your player and playing hand, and confirm recording permissions. Juniors need guardian consent and player assent.'},{icon:Search,title:'See the detail in every shot',text:'Review shot clips with skeleton overlays, measurable technique and confidence levels. Coach-reviewed thresholds turn measurements into explainable tips.'},{icon:ChartNoAxesCombined,title:'Build your bigger picture',text:'Use the same camera placement across sessions to compare technique trends. Share the JSON report with your coach and keep showing up.'}].map(({icon:Icon,title,text},i)=><div className="help-step" key={title}><span><Icon size={21}/></span><div><small>0{i+1}</small><h3>{title}</h3><p>{text}</p></div></div>)}</div><div className="help-setup"><h3>Start the local app</h3><p>Open a terminal in this project and run:</p><code>.venv\Scripts\courtside.exe serve</code><p>For development, run the API and <code>npm run dev</code> in separate terminals. The README includes installation, phone access and model setup instructions.</p></div><div className="privacy-note"><ShieldCheck size={18}/><p>Your video stays on your own machine. Demo sessions are synthetic. Real coaching thresholds await qualified-coach approval.</p></div><div className="modal-actions"><button className="primary-button" onClick={()=>{setHelp(false);navigate('live');}}>Open live court<ArrowUpRight size={16}/></button></div></Modal>}
   </div>;

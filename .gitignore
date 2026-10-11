@@ -16,6 +16,7 @@ storage/
 models/
 data/raw/
 data/labels/
+data/local_datasets.json
 out/
 *.mp4
 *.mov

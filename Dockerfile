@@ -7,7 +7,7 @@ COPY web ./web
 RUN npm run build
 
 FROM python:3.11-slim-bookworm
-RUN apt-get update && apt-get install -y --no-install-recommends libgl1 libglib2.0-0 \
+RUN apt-get update && apt-get install -y --no-install-recommends libgl1 libegl1 libgles2 libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --uid 10001 courtside
 WORKDIR /app

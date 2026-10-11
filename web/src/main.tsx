@@ -5,3 +5,7 @@ import AccountGate from './AccountGate';
 import './styles.css';
 import './refinement.css';
 ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><AccountGate><App /></AccountGate></React.StrictMode>);
+
+import './swing.css';
+
+import './watchBridge';

@@ -1,8 +1,10 @@
 # Training and model promotion
 
 The bundled MediaPipe task is a general pretrained pose model. Tennis shot labels
-default to a wrist-motion heuristic. No tennis-specific classifier has been trained
-on real footage in this workspace.
+default to a wrist-motion heuristic. No production-candidate four-stroke classifier
+has been trained on own-consented footage in this workspace. Public-dataset
+experiments use separate label schemas and cannot be promoted through this workflow;
+see [external training](external_training.md).
 
 The implemented baseline summarizes a confident pose window into translation/scale
 normalized temporal features and fits a four-class softmax classifier using NumPy.
