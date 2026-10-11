@@ -39,6 +39,35 @@ afterEach(() => {
   api.mockReset();
 });
 
+describe('account privacy', () => {
+  it('keeps the workspace hidden if auth configuration cannot load', async () => {
+    api.mockRejectedValueOnce(new Error('Network unavailable'));
+    render(<AccountGate><div>Private session feed</div></AccountGate>);
+    expect(await screen.findByText(/The sign-in service is unavailable/)).toBeTruthy();
+    expect(screen.queryByText('Private session feed')).toBeNull();
+  });
+
+  it('shows only the signed-in account’s empty feed', async () => {
+    const user = { id: 'player-one', name: 'First Player', email: 'first@example.test', role: 'player', academy_id: 'personal' };
+    api.mockImplementation(async path => {
+      const values: Record<string, unknown> = {
+        '/auth/config': { enabled: true, personal: true, google_enabled: true, setup_available: false },
+        '/auth/me': { user, csrf: 'csrf', workspaces: [{ id: user.id, name: user.name, role: user.role }] },
+        '/health': { model_ready: true },
+        '/sessions': [],
+        '/settings': { ...defaultSettings, display_name: 'First' },
+        '/reviews': [],
+      };
+      return values[path] as never;
+    });
+    render(<AccountGate><App/></AccountGate>);
+    expect(await screen.findByText('Connected', {}, { timeout: 5000 })).toBeTruthy();
+    expect(screen.getByText(/Your first session starts here/)).toBeTruthy();
+    expect(screen.queryByLabelText('Player workspace')).toBeNull();
+    expect(screen.queryByText('Demo sessions')).toBeNull();
+  });
+});
+
 describe('refined workspace flows', () => {
   it('resizes charts without shrinking labels or dropping session data', () => {
     let resize: ResizeObserverCallback;

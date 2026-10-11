@@ -9,7 +9,7 @@ from api.main import create_app
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.delenv("COURTSIDE_TOKEN", raising=False)
-    with TestClient(create_app(tmp_path / "storage", embedded_worker=False, demo=False)) as client:
+    with TestClient(create_app(tmp_path / "storage", embedded_worker=False, demo=False, auth_mode="local")) as client:
         yield client
 
 

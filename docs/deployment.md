@@ -2,8 +2,9 @@
 
 The verified installation target is Windows with Python 3.11 and Node 22. A clean
 environment using `requirements.lock` was installed and tested here. See README
-for setup. The app opens on **Live court** and uses a webcam/phone camera; uploads
-remain available for archived-session analysis.
+for setup. Sign-in is required by default, and each account sees only its own
+sessions. The app opens on **Sessions**; live camera analysis and uploads remain
+available after sign-in.
 
 ## Start on this machine
 
@@ -12,7 +13,9 @@ remain available for archived-session analysis.
 .qa-venv\Scripts\courtside.exe serve
 ```
 
-Open `http://127.0.0.1:8000/#live`. Choose a camera, attest processing permission,
+Open `http://127.0.0.1:8000/#sessions` and create the first account on localhost.
+Alternatively, configure [Google sign-in](google-signin.md) and use the exact
+configured site address. After sign-in, choose a camera, attest processing permission,
 click Start live feed and grant the browser's camera permission. Audio capture is
 disabled. Optional spoken tips use browser speech synthesis. Stop or navigating
 away closes the camera and live connection. Camera frames are processed in memory
@@ -39,14 +42,10 @@ HTTPS endpoint/reverse proxy on your private network. See the [camera API's secu
 context requirements](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia).
 Do not bypass certificate warnings or expose the service without authentication.
 
-Set a long random token in the server environment and configure the exact frontend
-origin when using a separate HTTPS frontend. Enter that token in app Settings.
-
-```powershell
-$env:COURTSIDE_TOKEN = 'your-private-random-token-at-least-24-characters'
-$env:COURTSIDE_ORIGIN = 'https://your-trusted-courtside-host'
-.venv\Scripts\courtside.exe serve --host 0.0.0.0
-```
+For a public host, use personal account mode, an HTTPS reverse proxy, and
+Google OAuth credentials as described in [Google sign-in](google-signin.md).
+Run the Python server on loopback; expose only the HTTPS proxy. Do not expose
+port 8000 directly to the internet.
 
 Configure the reverse proxy for WebSocket Upgrade, long-lived connections and the
 desired upload limit. Use HTTPS/WSS for any camera feed crossing a network. IP/RTSP
@@ -55,8 +54,8 @@ camera ingestion is not currently implemented; a browser-exposed/USB camera work
 ## Docker
 
 `Dockerfile` builds the React app and runs one non-root Python API/worker. Compose
-persists storage and mounts downloaded models read-only. It defaults to a localhost
-port binding and requires a workspace token. Download the model on the host first.
+persists storage and mounts downloaded models read-only. Compose binds the host
+port to localhost and uses personal sign-in. Download the model on the host first.
 
 ```powershell
 python data\download_model.py
@@ -64,11 +63,9 @@ docker compose config --quiet
 docker compose up --build -d
 ```
 
-Set `COURTSIDE_TOKEN` in your shell or a private, ignored `.env` before Compose.
-`/api/health` is liveness; `/api/ready` verifies local prerequisites. Docker is
-installed on this host but its daemon is not running, so the image has not been
-built or executed. CI configuration is provided but has not run on GitHub because
-this folder has no configured Git repository/remote.
+`/api/health` is liveness; `/api/ready` verifies local prerequisites, including
+initial account setup. A Docker image build has not been verified on this host.
+The repository's Windows and Linux CI runs build and test the source.
 
 ## Persistence and release gates
 

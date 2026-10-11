@@ -300,7 +300,7 @@ def test_match_routes_require_workspace_authorization(tmp_path, monkeypatch):
     from api.main import create_app
 
     monkeypatch.setenv("COURTSIDE_TOKEN", "secret-token")
-    with TestClient(create_app(tmp_path, embedded_worker=False, demo=False)) as secured:
+    with TestClient(create_app(tmp_path, embedded_worker=False, demo=False, auth_mode="local")) as secured:
         prefix = "/api/sessions/" + "a" * 24
         for path in ["/match", "/bounce-candidates", "/highlights/" + "b" * 24]:
             assert secured.get(prefix + path).status_code == 401

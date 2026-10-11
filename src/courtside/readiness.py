@@ -40,7 +40,10 @@ def installation_status(root: Path | None = None) -> dict:
         if not (root / f"configs/{name}.yaml").is_file():
             errors.append(f"Missing {name} config")
     host = os.environ.get("COURTSIDE_HOST", "127.0.0.1")
-    if host not in {"127.0.0.1", "::1", "localhost"} and len(os.environ.get("COURTSIDE_TOKEN", "")) < 24 and os.environ.get("COURTSIDE_ACCOUNTS", "0") != "1":
+    from api.auth_mode import configured_mode
+
+    mode = configured_mode()
+    if host not in {"127.0.0.1", "::1", "localhost"} and len(os.environ.get("COURTSIDE_TOKEN", "")) < 24 and mode == "local":
         errors.append("Remote binding requires a workspace token of at least 24 characters")
     rules_path = root / "configs/feedback_rules.yaml"
     validated = (

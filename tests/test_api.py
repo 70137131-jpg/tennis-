@@ -86,7 +86,7 @@ def test_media_is_signed_and_deletion_removes_every_artifact(client, video_file,
 
 def test_token_and_origin_access_controls(tmp_path, monkeypatch):
     monkeypatch.setenv("COURTSIDE_TOKEN", "a-test-token-with-32-characters")
-    with TestClient(create_app(tmp_path, embedded_worker=False, demo=False)) as client:
+    with TestClient(create_app(tmp_path, embedded_worker=False, demo=False, auth_mode="local")) as client:
         assert client.get("/api/health").status_code == 200
         assert client.get("/api/sessions").status_code == 401
         assert (

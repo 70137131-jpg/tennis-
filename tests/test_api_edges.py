@@ -77,7 +77,7 @@ def test_real_review_upsert_and_media_allowlist(client, video_file, upload_optio
 
 def test_nonlocal_clients_need_token(tmp_path, monkeypatch):
     monkeypatch.delenv("COURTSIDE_TOKEN", raising=False)
-    with TestClient(create_app(tmp_path, False, False), client=("192.0.2.5", 1234)) as client:
+    with TestClient(create_app(tmp_path, False, False, auth_mode="local"), client=("192.0.2.5", 1234)) as client:
         assert client.get("/api/sessions").status_code == 403
 
 

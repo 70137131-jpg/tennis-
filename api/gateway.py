@@ -11,15 +11,19 @@ from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
 from starlette.datastructures import Headers
 
 from api.accounts import COOKIE, SESSION_SECONDS, Accounts
+from api.google_auth import authorize_url, exchange_code
+from api.google_auth import settings as google_settings
 from api.security import RateLimiter, SecurityMiddleware, Telemetry
 
 
 def origins():
+    if os.environ.get("COURTSIDE_ENV") == "production":
+        return [os.environ["COURTSIDE_ORIGIN"]]
     return [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
@@ -60,7 +64,7 @@ class NewAccount(Credentials):
 
 
 class SetupAccount(NewAccount):
-    academy: str = Field(min_length=1, max_length=100)
+    academy: str = Field(default="", max_length=100)
 
 
 class WorkspaceRouter:
@@ -103,6 +107,7 @@ class WorkspaceRouter:
                         )
                     from api.main import create_app
 
+                    fresh_workspace = not (root / "courtside.sqlite").exists()
                     child = create_app(
                         root,
                         self.embedded_worker,
@@ -111,6 +116,12 @@ class WorkspaceRouter:
                         media_prefix=f"/api/workspaces/{uid}",
                         live_capacity=self.live_capacity,
                     )
+                    if fresh_workspace:
+                        import json
+                        preferences = child.state.store.settings()
+                        preferences.update(display_name=user["name"].split()[0], player_name=user["name"])
+                        with child.state.store.connection() as db:
+                            db.execute("UPDATE settings SET value=? WHERE id=1", (json.dumps(preferences),))
                     await self.stack.enter_async_context(child.router.lifespan_context(child))
                     self.apps[uid] = child
                 app = self.apps[uid]
@@ -146,10 +157,11 @@ class WorkspaceRouter:
             await JSONResponse({"detail": detail}, status_code=code)(scope, receive, send)
 
 
-def create_accounts_app(storage=None, embedded_worker=True):
+def create_accounts_app(storage=None, embedded_worker=True, personal=False):
     from courtside.pipeline import ROOT
 
-    accounts = Accounts(Path(storage or os.environ.get("COURTSIDE_STORAGE", "storage")))
+    accounts = Accounts(Path(storage or os.environ.get("COURTSIDE_STORAGE", "storage")), personal=personal)
+    google = google_settings()
     stack = AsyncExitStack()
     limiter, telemetry = RateLimiter(), Telemetry()
     capacity = threading.BoundedSemaphore(int(os.environ.get("COURTSIDE_LIVE_CAPACITY", "2")))
@@ -178,6 +190,8 @@ def create_accounts_app(storage=None, embedded_worker=True):
 
     def identity(request, admin=False):
         check_origin(request.scope)
+        if personal and admin:
+            raise HTTPException(403, "Team administration is unavailable in personal mode")
         user = accounts.resolve(request.cookies.get(COOKIE, ""))
         if not user:
             raise HTTPException(401, "Sign in to your academy")
@@ -206,13 +220,20 @@ def create_accounts_app(storage=None, embedded_worker=True):
 
     @app.get("/api/auth/config")
     def auth_config(request: Request):
-        return {"enabled": True, "setup_available": bool(local(request) and not accounts.has_users())}
+        return {
+            "enabled": True,
+            "personal": personal,
+            "google_enabled": google is not None,
+            "setup_available": bool(local(request) and not accounts.has_users()),
+        }
 
     @app.post("/api/auth/setup")
     def setup(value: SetupAccount, request: Request):
         secure_login(request)
         if not local(request):
             raise HTTPException(403, "Complete initial setup on the server's localhost page")
+        if not personal and not value.academy.strip():
+            raise HTTPException(400, "Academy name is required")
         try:
             user = accounts.create_user(
                 secrets.token_hex(16),
@@ -220,7 +241,7 @@ def create_accounts_app(storage=None, embedded_worker=True):
                 value.name,
                 "admin",
                 value.password,
-                value.academy,
+                value.academy if not personal else "Personal",
                 bootstrap=True,
             )
             accounts.audit(user, "academy_setup", user["id"])
@@ -240,11 +261,89 @@ def create_accounts_app(storage=None, embedded_worker=True):
             token,
             max_age=SESSION_SECONDS,
             httponly=True,
-            secure=request.url.scheme == "https",
-            samesite="strict",
+            secure=request.url.scheme == "https" or os.environ.get("COURTSIDE_ORIGIN", "").startswith("https://"),
+            samesite="lax",
             path="/",
         )
         return {"user": user, "csrf": csrf, "workspaces": accounts.workspaces(user)}
+
+    @app.get("/api/auth/google/start")
+    def google_start(request: Request):
+        if not google:
+            raise HTTPException(404, "Google sign-in is not configured")
+        secure_login(request)
+        if request.headers.get("host", "").lower() != google[2].split("//", 1)[1].lower():
+            raise HTTPException(400, "Open Courtside at its configured Google sign-in address")
+        state, verifier = accounts.create_google_flow()
+        response = RedirectResponse(authorize_url(google, state, verifier), status_code=302)
+        response.set_cookie(
+            "courtside-google-state", state, max_age=300, httponly=True,
+            secure=google[2].startswith("https://"), samesite="lax", path="/api/auth/google",
+        )
+        return response
+
+    @app.post("/api/auth/google/link")
+    def google_link(request: Request):
+        if not google:
+            raise HTTPException(404, "Google sign-in is not configured")
+        user = identity(request)
+        if request.headers.get("host", "").lower() != google[2].split("//", 1)[1].lower():
+            raise HTTPException(400, "Open Courtside at its configured Google sign-in address")
+        state, verifier = accounts.create_google_flow(user["id"])
+        response = JSONResponse({"url": authorize_url(google, state, verifier)})
+        response.set_cookie(
+            "courtside-google-state", state, max_age=300, httponly=True,
+            secure=google[2].startswith("https://"), samesite="lax", path="/api/auth/google",
+        )
+        return response
+
+    @app.get("/api/auth/google/callback")
+    def google_callback(request: Request, state: str = "", code: str = "", error: str = ""):
+        if not google:
+            raise HTTPException(404, "Google sign-in is not configured")
+        if not state or len(state) > 128 or not hmac.compare_digest(
+            state, request.cookies.get("courtside-google-state", "")
+        ):
+            raise HTTPException(400, "Google sign-in request expired")
+        flow = accounts.consume_google_flow(state)
+        if not flow:
+            raise HTTPException(400, "Google sign-in request expired")
+        response = RedirectResponse("/?auth_error=google_denied#sessions" if error else "/#sessions", status_code=303)
+        response.delete_cookie(
+            "courtside-google-state", path="/api/auth/google",
+            secure=google[2].startswith("https://"), httponly=True, samesite="lax",
+        )
+        if error:
+            return response
+        if not code or len(code) > 4096:
+            raise HTTPException(400, "Google authorization code is missing")
+        try:
+            claims = exchange_code(google, code, flow["verifier"])
+            link_uid = flow["link_user_id"]
+            if link_uid:
+                existing = accounts.resolve(request.cookies.get(COOKIE, ""))
+                if not existing or existing["id"] != link_uid:
+                    raise ValueError("Sign in again before linking Google")
+            user = accounts.google_user(
+                claims["sub"], claims["email"], claims.get("name", ""), link_uid,
+            )
+        except ValueError as exc:
+            response.headers["location"] = (
+                "/?auth_error=account_exists#sessions"
+                if "email exists" in str(exc) else "/?auth_error=google_invalid#sessions"
+            )
+            return response
+        except Exception:
+            response.headers["location"] = "/?auth_error=google_unavailable#sessions"
+            return response
+        if not link_uid:
+            token, _ = accounts.new_session(user["id"])
+            response.set_cookie(
+                COOKIE, token, max_age=SESSION_SECONDS, httponly=True,
+                secure=google[2].startswith("https://"), samesite="lax", path="/",
+            )
+        accounts.audit(user, "google_link" if link_uid else "google_login", user["id"])
+        return response
 
     @app.get("/api/auth/me")
     def me(request: Request):
@@ -261,7 +360,7 @@ def create_accounts_app(storage=None, embedded_worker=True):
         accounts.logout(request.cookies.get(COOKIE, ""))
         accounts.audit(user, "logout", user["id"])
         response.delete_cookie(
-            COOKIE, path="/", secure=request.url.scheme == "https", httponly=True, samesite="strict"
+            COOKIE, path="/", secure=request.url.scheme == "https" or os.environ.get("COURTSIDE_ORIGIN", "").startswith("https://"), httponly=True, samesite="lax"
         )
         return {"signed_out": True}
 
@@ -306,9 +405,9 @@ def create_accounts_app(storage=None, embedded_worker=True):
         from courtside.readiness import installation_status
 
         status = installation_status()
-        if not accounts.has_users():
+        if not accounts.has_users() and not (personal and google):
             status["local_ready"] = False
-            status["errors"].append("Complete initial academy account setup on localhost")
+            status["errors"].append("Complete initial account setup on localhost")
         return JSONResponse(status, status_code=200 if status["local_ready"] else 503)
 
     @app.get("/api/operations/metrics")

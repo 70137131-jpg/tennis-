@@ -29,7 +29,7 @@ For frontend development, keep `courtside serve` running and run `npm run dev` i
 
 ## Use Courtside
 
-- **Sessions:** Choose **Your sessions** in the workspace selector, then **Import video** to upload an MP4 or MOV. Confirm processing permission for everyone in the recording. Junior sessions also require guardian consent and player assent. Analysis produces a report, annotated video, shot clips, and measurements.
+- **Sessions:** Sign in, open **Sessions**, then choose **Import video** to upload an MP4 or MOV. Confirm processing permission for everyone in the recording. Junior sessions also require guardian consent and player assent. Analysis produces a report, annotated video, shot clips, and measurements.
 - **Live camera:** Open [Live camera](http://127.0.0.1:8000/#live), choose a browser camera, confirm processing permission, and start the feed. Live frames are processed in memory and are not recorded. A phone camera accessed over a network needs a trusted HTTPS connection; see [deployment](docs/deployment.md).
 - **Match review:** In a completed session, open **Match & highlights** to keep score from confirmed point winners, review provisional line estimates, select rally candidates, and export private highlight clips. Scoring does not determine winners automatically, and line estimates are not officiating-grade calls. See [match tools](docs/match-tools.md).
 - **Apple Watch:** Source for an iPhone and paired Watch companion is in [native/apple](native/apple/README.md). It still needs a Mac build, signing, and device testing.
@@ -38,9 +38,9 @@ The [interface guide](docs/tennis-interface.md) explains the screens and remaini
 
 ## Accounts and privacy
 
-The default local server is intended for one trusted machine. For separate password-protected academy accounts, set `COURTSIDE_ACCOUNTS=1` in the shell before starting the server, complete first-account setup on the server's localhost page, and sign in. Account workspaces have separate storage; academy administrators and coaches can access player workspaces. Google sign-in is **not implemented** in this version.
+Sign-in is required by default. Create the first password account on the server's localhost page, or [configure Google sign-in](docs/google-signin.md) so each Google user can create an account at first login. Every account has its own storage, session feed, reports, media, and match data. Even an administrator cannot open another user's workspace in personal mode. Existing recordings in the former shared `storage/` workspace are preserved separately and are not automatically assigned to an account.
 
-If you bind the server beyond localhost, set a private `COURTSIDE_TOKEN` of at least 24 characters or enable academy accounts, and use HTTPS for browser cameras and sign-in. See [deployment](docs/deployment.md) for network, backup, and storage guidance. `.env.example` lists settings, but the CLI does not load a `.env` file automatically. Never commit tokens, recordings, SQLite databases, or model weights.
+For public access, set `COURTSIDE_ENV=production` and an HTTPS `COURTSIDE_ORIGIN`, then run the server on loopback behind a trusted HTTPS reverse proxy. The app uses secure, HTTP-only session cookies and checks CSRF tokens for changes. See [Google setup](docs/google-signin.md) and [deployment](docs/deployment.md). `.env.example` lists the settings; the CLI does not load `.env` automatically. Never commit credentials, recordings, SQLite databases, or model weights.
 
 ## Command-line analysis
 
