@@ -17,6 +17,7 @@ def test_help_and_version(command, monkeypatch, capsys):
 
 
 def test_remote_serve_requires_long_token(monkeypatch):
+    monkeypatch.setenv("COURTSIDE_AUTH_MODE", "local")
     monkeypatch.delenv("COURTSIDE_TOKEN", raising=False)
     monkeypatch.setattr(sys, "argv", ["courtside", "serve", "--host", "0.0.0.0"])
     with pytest.raises(SystemExit) as exc:
@@ -41,6 +42,7 @@ def test_doctor_reports_prerequisites_and_preserves_release_gates(monkeypatch, c
 
 
 def test_missing_installation_and_remote_token_fail(tmp_path, monkeypatch):
+    monkeypatch.setenv("COURTSIDE_AUTH_MODE", "local")
     monkeypatch.delenv("COURTSIDE_MODEL", raising=False)
     monkeypatch.setenv("COURTSIDE_HOST", "0.0.0.0")
     monkeypatch.delenv("COURTSIDE_TOKEN", raising=False)

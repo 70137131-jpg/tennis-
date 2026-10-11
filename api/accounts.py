@@ -37,7 +37,8 @@ def digest_token(token):
 
 
 class Accounts:
-    def __init__(self, root: Path):
+    def __init__(self, root: Path, personal=False):
+        self.personal = personal
         self.root = root.resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         self.path = self.root / "accounts.sqlite3"
@@ -52,6 +53,11 @@ class Accounts:
                     csrf TEXT NOT NULL, expires REAL NOT NULL);
                 CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY AUTOINCREMENT, academy_id TEXT NOT NULL,
                     actor_id TEXT NOT NULL, action TEXT NOT NULL, target_id TEXT NOT NULL, created REAL NOT NULL);
+                CREATE TABLE IF NOT EXISTS google_identities(
+                    sub TEXT PRIMARY KEY, user_id TEXT NOT NULL UNIQUE REFERENCES users(id));
+                CREATE TABLE IF NOT EXISTS google_flows(
+                    state_hash TEXT PRIMARY KEY, verifier TEXT NOT NULL, link_user_id TEXT,
+                    expires REAL NOT NULL);
             """)
         self.dummy = password_hash(secrets.token_urlsafe(30))
 
@@ -96,23 +102,27 @@ class Accounts:
     def login(self, email, password):
         with self.connection() as db:
             row = db.execute("SELECT * FROM users WHERE email=?", (email.strip().casefold(),)).fetchone()
-        matches = password_matches(password, row["password_hash"] if row else self.dummy)
+        matches = password_matches(password, row["password_hash"] if row and row["password_hash"] else self.dummy)
         if not matches or not row or row["disabled"]:
             raise ValueError("Email or passphrase is incorrect")
+        token, csrf = self.new_session(row["id"])
+        self.audit(self.user(row["id"]), "login", row["id"])
+        return token, csrf, self.user(row["id"])
+
+    def new_session(self, user_id):
         token, csrf = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
         with self.connection() as db:
             db.execute("DELETE FROM auth_sessions WHERE expires<?", (time.time(),))
             db.execute(
                 "INSERT INTO auth_sessions VALUES(?,?,?,?)",
-                (digest_token(token), row["id"], csrf, time.time() + SESSION_SECONDS),
+                (digest_token(token), user_id, csrf, time.time() + SESSION_SECONDS),
             )
             # Bound sessions per user; retain the most recent five.
             db.execute(
                 "DELETE FROM auth_sessions WHERE user_id=? AND token_hash NOT IN (SELECT token_hash FROM auth_sessions WHERE user_id=? ORDER BY expires DESC LIMIT 5)",
-                (row["id"], row["id"]),
+                (user_id, user_id),
             )
-        self.audit(self.user(row["id"]), "login", row["id"])
-        return token, csrf, self.user(row["id"])
+        return token, csrf
 
     def resolve(self, token):
         if not token or len(token) > 128:
@@ -134,7 +144,9 @@ class Accounts:
                 "SELECT id,name,role FROM users WHERE academy_id=? AND disabled=0 ORDER BY name",
                 (user["academy_id"],),
             ).fetchall()
-        return [dict(r) for r in rows if user["role"] in {"admin", "coach"} or r["id"] == user["id"]]
+        return [dict(r) for r in rows if r["id"] == user["id"] or (
+            not self.personal and user["role"] in {"admin", "coach"}
+        )]
 
     def workspace(self, user, uid):
         target = self.user(uid)
@@ -142,7 +154,7 @@ class Accounts:
             not target
             or target["disabled"]
             or target["academy_id"] != user["academy_id"]
-            or (user["role"] == "player" and uid != user["id"])
+            or (uid != user["id"] and (self.personal or user["role"] == "player"))
         ):
             raise ValueError("Workspace not found")
         return self.root / "academies" / target["academy_id"] / "workspaces" / uid
@@ -176,3 +188,59 @@ class Accounts:
                     (user["academy_id"],),
                 )
             ]
+
+    def create_google_flow(self, link_user_id=None):
+        state, verifier = secrets.token_urlsafe(32), secrets.token_urlsafe(48)
+        with self.connection() as db:
+            db.execute("DELETE FROM google_flows WHERE expires<?", (time.time(),))
+            db.execute("INSERT INTO google_flows VALUES(?,?,?,?)", (
+                digest_token(state), verifier, link_user_id, time.time() + 300,
+            ))
+        return state, verifier
+
+    def consume_google_flow(self, state):
+        with self.connection() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT verifier,link_user_id,expires FROM google_flows WHERE state_hash=?", (
+                digest_token(state),
+            )).fetchone()
+            db.execute("DELETE FROM google_flows WHERE state_hash=?", (digest_token(state),))
+        return dict(row) if row and row["expires"] > time.time() else None
+
+    def google_user(self, sub, email, name, link_user_id=None):
+        if not isinstance(sub, str) or not 1 <= len(sub) <= 255:
+            raise ValueError("Google identity is invalid")
+        email = email.strip().casefold()
+        if not 3 <= len(email) <= 120 or "@" not in email:
+            raise ValueError("Google email is invalid")
+        name = name.strip()[:80] or email.split("@", 1)[0]
+        with self.connection() as db:
+            db.execute("BEGIN IMMEDIATE")
+            existing = db.execute("SELECT user_id FROM google_identities WHERE sub=?", (sub,)).fetchone()
+            if existing:
+                if link_user_id and existing[0] != link_user_id:
+                    raise ValueError("This Google account is already linked to another user")
+                uid = existing[0]
+            elif link_user_id:
+                owner = db.execute("SELECT id FROM users WHERE id=? AND disabled=0", (link_user_id,)).fetchone()
+                if not owner:
+                    raise ValueError("Sign in again before linking Google")
+                other = db.execute("SELECT 1 FROM google_identities WHERE user_id=?", (link_user_id,)).fetchone()
+                if other:
+                    raise ValueError("This account already has a linked Google identity")
+                uid = link_user_id
+                db.execute("INSERT INTO google_identities VALUES(?,?)", (sub, uid))
+            else:
+                # Never merge identities by email: only a signed-in user can link accounts.
+                if db.execute("SELECT 1 FROM users WHERE email=?", (email,)).fetchone():
+                    raise ValueError("An account with this email exists. Sign in and link Google from your account menu.")
+                uid = secrets.token_hex(16)
+                db.execute("INSERT INTO academies VALUES(?,?)", (uid, "Personal"))
+                db.execute("INSERT INTO users VALUES(?,?,?,?,?,?,0)", (
+                    uid, uid, email, name, "player", "",
+                ))
+                db.execute("INSERT INTO google_identities VALUES(?,?)", (sub, uid))
+        user = self.user(uid)
+        if not user or user["disabled"]:
+            raise ValueError("This account is unavailable")
+        return user

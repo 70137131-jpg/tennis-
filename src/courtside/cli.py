@@ -62,10 +62,17 @@ def main():
         except (ValueError, RuntimeError) as exc:
             parser.exit(1, f"\n{exc}\n")
     elif args.command == "serve":
+        from api.auth_mode import configured_mode
+
+        mode = configured_mode()
+        if os.environ.get("COURTSIDE_ENV") == "production" and args.host not in {
+            "127.0.0.1", "localhost", "::1"
+        }:
+            parser.exit(1, "Production must bind to loopback behind a trusted HTTPS reverse proxy.\n")
         if (
             args.host not in {"127.0.0.1", "localhost", "::1"}
             and len(os.environ.get("COURTSIDE_TOKEN", "")) < 24
-            and os.environ.get("COURTSIDE_ACCOUNTS", "0") != "1"
+            and mode == "local"
         ):
             parser.exit(1, "Phone/remote access requires COURTSIDE_TOKEN with at least 24 characters.\n")
         import uvicorn

@@ -5,11 +5,15 @@ import { BallMark, Modal } from './components';
 import './production.css';
 
 interface Identity {user:AccountUser;csrf:string;workspaces:Workspace[]}
+interface AuthConfig {enabled:boolean;setup_available:boolean;personal:boolean;google_enabled:boolean}
 interface AccountControlsValue {
   identity: Identity;
   workspace: string;
   switchWorkspace: (value: string) => void;
   manageTeam: () => void;
+  linkGoogle: () => Promise<void>;
+  personal: boolean;
+  googleEnabled: boolean;
   logout: () => Promise<void>;
 }
 const AccountControlsContext = createContext<AccountControlsValue | null>(null);
@@ -32,17 +36,18 @@ export function AccountControls() {
     };
   }, []);
   if (!account) return null;
-  const { identity, workspace, switchWorkspace, manageTeam, logout } = account;
+  const { identity, workspace, switchWorkspace, manageTeam, linkGoogle, personal, googleEnabled, logout } = account;
   return <div className="account-controls">
-    <label className="account-workspace"><Users size={16}/><span className="workspace-select-label" aria-hidden="true">Workspace</span>
+    {!personal && <label className="account-workspace"><Users size={16}/><span className="workspace-select-label" aria-hidden="true">Workspace</span>
       <select aria-label="Player workspace" value={workspace} onChange={event => switchWorkspace(event.target.value)}>
         {identity.workspaces.map(value => <option key={value.id} value={value.id}>{value.name}</option>)}
       </select>
-    </label>
+    </label>}
     <details className="account-menu" ref={menu}>
       <summary aria-label="Account menu"><span className="avatar">{identity.user.name.slice(0, 1).toUpperCase()}</span><ChevronDown size={13}/></summary>
       <div className="account-menu-content"><strong>{identity.user.name}</strong><small>{identity.user.role}</small>
-        {identity.user.role === 'admin' && <button onClick={() => { if (menu.current) menu.current.open = false; manageTeam(); }}><Users size={16}/>Manage team</button>}
+        {!personal && identity.user.role === 'admin' && <button onClick={() => { if (menu.current) menu.current.open = false; manageTeam(); }}><Users size={16}/>Manage team</button>}
+        {googleEnabled && <button onClick={() => { if (menu.current) menu.current.open = false; void linkGoogle(); }}><ShieldCheck size={16}/>Link Google account</button>}
         <button onClick={() => { if (menu.current) menu.current.open = false; void logout(); }}><LogOut size={16}/>Sign out</button>
       </div>
     </details>
@@ -50,6 +55,8 @@ export function AccountControls() {
 }
 export default function AccountGate({children}:{children:ReactNode}) {
   const [enabled,setEnabled]=useState<boolean|null>(null);
+  const [personal,setPersonal]=useState(false);
+  const [googleEnabled,setGoogleEnabled]=useState(false);
   const [setup,setSetup]=useState(false);
   const [identity,setIdentity]=useState<Identity|null>(null);
   const [workspace,setWorkspace]=useState('');
@@ -59,13 +66,16 @@ export default function AccountGate({children}:{children:ReactNode}) {
   const [team,setTeam]=useState(false);const [role,setRole]=useState('player');
   const [message,setMessage]=useState('');
   const accept=(value:Identity)=>{const selected=value.workspaces.find(w=>w.id===value.user.id)?.id||value.workspaces[0]?.id||'';configureAccount({user:value.user,csrf:value.csrf,workspace:selected});setIdentity(value);setWorkspace(selected);sessionStorage.removeItem('courtside-token');};
-  useEffect(()=>{let mounted=true;void request<{enabled:boolean;setup_available:boolean}>('/auth/config').then(async config=>{if(!mounted)return;setEnabled(config.enabled);setSetup(config.setup_available);if(config.enabled){try{const value=await request<Identity>('/auth/me');if(mounted)accept(value);}catch{configureAccount(null);}}}).catch(()=>{if(mounted)setEnabled(false);});return()=>{mounted=false;};},[]);
+  useEffect(()=>{let mounted=true;void request<AuthConfig>('/auth/config').then(async config=>{if(!mounted)return;setEnabled(config.enabled);setPersonal(Boolean(config.personal));setGoogleEnabled(Boolean(config.google_enabled));setSetup(config.setup_available);if(config.enabled){try{const value=await request<Identity>('/auth/me');if(mounted)accept(value);}catch{configureAccount(null);}}}).catch(()=>{if(mounted){configureAccount(null);setError('The sign-in service is unavailable. Reconnect and refresh this page.');setEnabled(true);}});return()=>{mounted=false;};},[]);
   const submit=async(event:React.FormEvent)=>{event.preventDefault();setBusy(true);setError('');try{if(setup){await request('/auth/setup',{method:'POST',body:JSON.stringify({email,password,name,academy})});setSetup(false);}accept(await request<Identity>('/auth/login',{method:'POST',body:JSON.stringify({email,password})}));setPassword('');}catch(err){setError((err as Error).message);}finally{setBusy(false);}};
   const logout=async()=>{try{await request('/auth/logout',{method:'POST'});}finally{configureAccount(null);setIdentity(null);setWorkspace('');localStorage.removeItem('courtside-settings');localStorage.removeItem('courtside-mode');}};
-  const switchWorkspace=(value:string)=>{if(!identity)return;configureAccount({user:identity.user,csrf:identity.csrf,workspace:value});setWorkspace(value);};
+  const switchWorkspace=(value:string)=>{if(!identity||personal||!identity.workspaces.some(item=>item.id===value))return;configureAccount({user:identity.user,csrf:identity.csrf,workspace:value});setWorkspace(value);};
+  const linkGoogle=async()=>{try{const {url}=await request<{url:string}>('/auth/google/link',{method:'POST'});window.location.assign(url);}catch(err){setError((err as Error).message);}};
+  const googleError=new URLSearchParams(window.location.search).get('auth_error');
+  const googleMessage=googleError==='account_exists'?'This email already has an account. Sign in with your passphrase, then link Google from the account menu.':googleError==='google_denied'?'Google sign-in was cancelled.':googleError?'Google sign-in could not finish. Please try again.':'';
   const addMember=async(event:React.FormEvent)=>{event.preventDefault();setBusy(true);setError('');try{await request('/admin/users',{method:'POST',body:JSON.stringify({email,password,name,role})});const value=await request<Identity>('/auth/me');setIdentity(value);setMessage('Account created. Share its initial passphrase privately.');setPassword('');setEmail('');setName('');}catch(err){setError((err as Error).message);}finally{setBusy(false);}};
   if(enabled===null)return <div className="account-loading" role="status"><LoaderCircle className="spin"/>Opening your workspace…</div>;
   if(!enabled)return <>{children}</>;
-  if(!identity)return <main className="account-entry"><div className="account-story"><BallMark/><span className="eyebrow">COURTSIDE ACADEMY</span><h1>Your court.<br/>Your team.<br/>A clearer game.</h1><p>A private place for live coaching and measurable progress.</p><div><ShieldCheck size={18}/>Individual accounts. Private player workspaces.</div></div><form className="account-form" onSubmit={submit}><span className="eyebrow">{setup?'FIRST COURT, FIRST ACCOUNT':'WELCOME BACK'}</span><h2>{setup?'Set up your academy':'Sign in to Courtside'}</h2><p>{setup?'Create the academy administrator on this machine.':'Use the account provided by your academy administrator.'}</p>{setup&&<><label>Academy name<input required value={academy} onChange={e=>setAcademy(e.target.value)} maxLength={100}/></label><label>Your name<input required autoComplete="name" value={name} onChange={e=>setName(e.target.value)} maxLength={80}/></label></>}<label>Email<input required type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} maxLength={120}/></label><label>Passphrase<input required type="password" autoComplete={setup?'new-password':'current-password'} minLength={15} maxLength={128} value={password} onChange={e=>setPassword(e.target.value)}/></label><small>Use 15 or more characters. Your passphrase is never stored as plain text.</small>{error&&<p className="form-error" role="alert">{error}</p>}<button className="primary-button" disabled={busy}>{busy?<LoaderCircle className="spin" size={16}/>:<ShieldCheck size={16}/>} {busy?'Connecting…':setup?'Create academy & sign in':'Sign in'}</button></form></main>;
-  return <AccountControlsContext.Provider value={{ identity, workspace, switchWorkspace, logout, manageTeam: () => {setTeam(true);setName('');setEmail('');setPassword('');setError('');setMessage('');} }}><div className="account-active"><div key={workspace}>{children}</div>{team&&<Modal title="Add an academy account" subtitle="Players see their own workspace. Coaches can review players in this academy." onClose={()=>setTeam(false)}><form className="account-member" onSubmit={addMember}><label>Name<input required value={name} onChange={e=>setName(e.target.value)} maxLength={80}/></label><label>Email<input required type="email" value={email} onChange={e=>setEmail(e.target.value)} maxLength={120}/></label><label>Role<select value={role} onChange={e=>setRole(e.target.value)}><option value="player">Player</option><option value="coach">Coach</option><option value="admin">Administrator</option></select></label><label>Initial passphrase<input required type="password" minLength={15} maxLength={128} autoComplete="new-password" value={password} onChange={e=>setPassword(e.target.value)}/></label>{error&&<p role="alert" className="form-error">{error}</p>}{message&&<p role="status">{message}</p>}<button className="primary-button" disabled={busy}>Create account</button></form></Modal>}</div></AccountControlsContext.Provider>;
+  if(!identity)return <main className="account-entry"><div className="account-story"><BallMark/><span className="eyebrow">COURTSIDE</span><h1>Your court.<br/>Your data.<br/>A clearer game.</h1><p>A private place for live coaching and measurable progress.</p><div><ShieldCheck size={18}/>Individual accounts. Private player workspaces.</div></div><form className="account-form" onSubmit={submit}><span className="eyebrow">{setup?'FIRST COURT, FIRST ACCOUNT':'WELCOME BACK'}</span><h2>{setup?(personal?'Create your account':'Set up your academy'):'Sign in to Courtside'}</h2><p>{setup?(personal?'Create the first account on this machine, or sign in with Google.':'Create the academy administrator on this machine.'):(personal?'Open your private tennis workspace.':'Use the account provided by your academy administrator.')}</p>{setup&&<>{!personal&&<label>Academy name<input required value={academy} onChange={e=>setAcademy(e.target.value)} maxLength={100}/></label>}<label>Your name<input required autoComplete="name" value={name} onChange={e=>setName(e.target.value)} maxLength={80}/></label></>}<label>Email<input required type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} maxLength={120}/></label><label>Passphrase<input required type="password" autoComplete={setup?'new-password':'current-password'} minLength={15} maxLength={128} value={password} onChange={e=>setPassword(e.target.value)}/></label><small>Use 15 or more characters. Your passphrase is never stored as plain text.</small>{(error||googleMessage)&&<p className="form-error" role="alert">{error||googleMessage}</p>}<button className="primary-button" disabled={busy}>{busy?<LoaderCircle className="spin" size={16}/>:<ShieldCheck size={16}/>} {busy?'Connecting…':setup?(personal?'Create account':'Create academy & sign in'):'Sign in'}</button>{googleEnabled&&<a className="secondary-button" href="/api/auth/google/start">Continue with Google</a>}</form></main>;
+  return <AccountControlsContext.Provider value={{ identity, workspace, switchWorkspace, personal, googleEnabled, linkGoogle, logout, manageTeam: () => {setTeam(true);setName('');setEmail('');setPassword('');setError('');setMessage('');} }}><div className="account-active"><div key={workspace}>{error&&<p className="form-error" role="alert">{error}</p>}{children}</div>{team&&<Modal title="Add an academy account" subtitle="Players see their own workspace. Coaches can review players in this academy." onClose={()=>setTeam(false)}><form className="account-member" onSubmit={addMember}><label>Name<input required value={name} onChange={e=>setName(e.target.value)} maxLength={80}/></label><label>Email<input required type="email" value={email} onChange={e=>setEmail(e.target.value)} maxLength={120}/></label><label>Role<select value={role} onChange={e=>setRole(e.target.value)}><option value="player">Player</option><option value="coach">Coach</option><option value="admin">Administrator</option></select></label><label>Initial passphrase<input required type="password" minLength={15} maxLength={128} autoComplete="new-password" value={password} onChange={e=>setPassword(e.target.value)}/></label>{error&&<p role="alert" className="form-error">{error}</p>}{message&&<p role="status">{message}</p>}<button className="primary-button" disabled={busy}>Create account</button></form></Modal>}</div></AccountControlsContext.Provider>;
 }

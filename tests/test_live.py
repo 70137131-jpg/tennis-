@@ -273,7 +273,7 @@ def test_websocket_token_enforcement_and_frame_limits(tmp_path, monkeypatch, jpe
             pass
 
     monkeypatch.setattr("api.live.LiveAnalyzer", FakeLive)
-    with TestClient(create_app(tmp_path, False, False)) as client:
+    with TestClient(create_app(tmp_path, False, False, auth_mode="local")) as client:
         with client.websocket_connect("/api/live") as ws:
             ws.send_json({"type": "start", "options": {"processing_consent": True}})
             assert "token" in ws.receive_json()["message"]

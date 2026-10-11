@@ -66,12 +66,17 @@ class Review(BaseModel):
 
 
 def create_app(
-    storage=None, embedded_worker=True, demo=True, trusted_gateway=False, media_prefix="", live_capacity=None
+    storage=None, embedded_worker=True, demo=True, trusted_gateway=False, media_prefix="", live_capacity=None,
+    auth_mode=None,
 ):
-    if not trusted_gateway and os.environ.get("COURTSIDE_ACCOUNTS", "0") == "1":
-        from api.gateway import create_accounts_app
+    if not trusted_gateway:
+        from api.auth_mode import configured_mode
 
-        return create_accounts_app(storage, embedded_worker)
+        mode = configured_mode(auth_mode)
+        if mode != "local":
+            from api.gateway import create_accounts_app
+
+            return create_accounts_app(storage, embedded_worker, personal=mode == "personal")
     store = Store(storage)
     token = "" if trusted_gateway else os.environ.get("COURTSIDE_TOKEN", "")
     key_path = store.root / ".signing_key"
